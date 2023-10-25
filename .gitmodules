@@ -1,0 +1,6 @@
+[submodule "submodules/MAYO-C"]
+	path = submodules/MAYO-C
+	url = https://github.com/PQCMayo/MAYO-C
+[submodule "submodules/pqm4"]
+	path = submodules/pqm4
+	url = https://github.com/PQCMayo/pqm4

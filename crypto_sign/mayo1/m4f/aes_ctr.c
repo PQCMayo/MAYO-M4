@@ -1,1 +1,1 @@
-../../mayo1/ref/aes_ctr.c
+../ref/aes_ctr.c

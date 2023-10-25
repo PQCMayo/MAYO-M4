@@ -1,1 +1,1 @@
-../../mayo1/m4f/gf16_bitslice.i
+../../../m4fasm/gf16_bitslice.i

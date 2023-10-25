@@ -1,1 +1,1 @@
-../../mayo1/m4f/ef.S
+../../../m4fasm/ef.S

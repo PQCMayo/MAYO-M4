@@ -1,1 +1,1 @@
-../../mayo1/m4f/rng.h
+../ref/rng.h

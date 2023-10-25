@@ -3,10 +3,9 @@
 #ifndef MAYO_H
 #define MAYO_H
 
-#define MAYO_VARIANT MAYO_3
-
-#include <stddef.h>
 #include <stdint.h>
+
+#define MAYO_VARIANT MAYO_3
 
 #define F_TAIL_LEN 5
 #define F_TAIL_64                                                              \
@@ -206,9 +205,10 @@ typedef struct {
 } mayo_params_t;
 
 typedef struct sk_t {
+    uint64_t p[P1_BYTES_MAX/8 + P2_BYTES_MAX/8];
     uint8_t o[O_BYTES_MAX];
-    uint32_t p[P1_BYTES_MAX/4 + P2_BYTES_MAX/4];
 } sk_t;
+
 
 /**
  * MAYO parameter sets
@@ -320,7 +320,6 @@ int mayo_expand_pk(const mayo_params_t *p, const unsigned char *cpk,
 int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
                    sk_t *esk);
 
-
 /**
  * Mayo verify signature.
  *
@@ -331,7 +330,6 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
  * @param[out] m Message stored if verification succeeds
  * @param[out] mlen Pointer to the length of m
  * @param[in] sig Signature
- * @param[in] siglen Length of sig
  * @param[in] pk Compacted public key
  * @return int 0 if verification succeeded, 1 otherwise.
  */

@@ -1,7 +1,7 @@
 # MAYO-M4
 Arm Cortex-M4 implementation of [MAYO](https://pqmayo.org/).
 
-This repository includes the Arm Cortex-M4 implementations as described in the paper **Nibbling MAYO: Optimized Implementations for AVX2 and Cortex-M4** available at XXX.
+This repository includes the Arm Cortex-M4 implementations as described in the paper **Nibbling MAYO: Optimized Implementations for AVX2 and Cortex-M4** available at available [here](https://eprint.iacr.org/2023/1683.pdf).
 
 It consists of two variants:
 1. A slower version compatible with the round-1 specification of MAYO using bitsliced representation. This version is contained in the [main branch](https://github.com/PQCMayo/MAYO-M4/tree/main) of this repository.

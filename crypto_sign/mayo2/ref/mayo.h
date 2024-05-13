@@ -4,7 +4,7 @@
 #define MAYO_H
 
 #include <stdint.h>
-
+#include <stdlib.h>
 #define MAYO_VARIANT MAYO_2
 
 #define F_TAIL_LEN 5
@@ -122,12 +122,17 @@
 #define PARAM_JOIN2_(a, b) a##_##b
 #define PARAM_JOIN2(a, b) PARAM_JOIN2_(a, b)
 #define PARAM_NAME(end) PARAM_JOIN2(MAYO_VARIANT, end)
+#define PARAM_JOIN3_(a, b, c) pqmayo_##a##_##b##_##c
+#define PARAM_JOIN3(a, b, c) PARAM_JOIN3_(a, b, c)
+#define PARAM_NAME3(end, s) PARAM_JOIN3(MAYO_VARIANT, end, s)
+#define MAYO_NAMESPACE(s) PARAM_NAME3(ref, s)
 
 #ifdef ENABLE_PARAMS_DYNAMIC
 #define NAME_MAX mayo5
 #define N_MAX 133
 #define M_MAX 128
 #define O_MAX 18
+#define V_MAX 121
 #define K_MAX 12
 #define Q_MAX 16
 #define PK_SEED_BYTES_MAX 16
@@ -161,6 +166,7 @@
 #define P1_BYTES_MAX PARAM_NAME(P1_bytes)
 #define P2_BYTES_MAX PARAM_NAME(P2_bytes)
 #define P3_BYTES_MAX PARAM_NAME(P3_bytes)
+#define SIG_BYTES_MAX PARAM_NAME(sig_bytes)
 #define CSK_BYTES_MAX PARAM_NAME(csk_bytes)
 #define ESK_BYTES_MAX PARAM_NAME(esk_bytes)
 #define CPK_BYTES_MAX PARAM_NAME(cpk_bytes)
@@ -173,6 +179,33 @@
 #else
 #error "Parameter not specified"
 #endif
+
+#define PARAM_name(p) PARAM_NAME(name)
+#define PARAM_m(p) PARAM_NAME(m)
+#define PARAM_n(p) PARAM_NAME(n)
+#define PARAM_o(p) PARAM_NAME(o)
+#define PARAM_v(p) PARAM_NAME(v)
+#define PARAM_A_cols(p) PARAM_NAME(A_cols)
+#define PARAM_k(p) PARAM_NAME(k)
+#define PARAM_q(p) PARAM_NAME(q)
+#define PARAM_m_bytes(p) PARAM_NAME(m_bytes)
+#define PARAM_O_bytes(p) PARAM_NAME(O_bytes)
+#define PARAM_v_bytes(p) PARAM_NAME(v_bytes)
+#define PARAM_r_bytes(p) PARAM_NAME(r_bytes)
+#define PARAM_P1_bytes(p) PARAM_NAME(P1_bytes)
+#define PARAM_P2_bytes(p) PARAM_NAME(P2_bytes)
+#define PARAM_P3_bytes(p) PARAM_NAME(P3_bytes)
+#define PARAM_csk_bytes(p) PARAM_NAME(csk_bytes)
+#define PARAM_esk_bytes(p) PARAM_NAME(esk_bytes)
+#define PARAM_cpk_bytes(p) PARAM_NAME(cpk_bytes)
+#define PARAM_epk_bytes(p) PARAM_NAME(epk_bytes)
+#define PARAM_sig_bytes(p) PARAM_NAME(sig_bytes)
+static const unsigned char f_tail[] = PARAM_NAME(f_tail);
+#define PARAM_salt_bytes(p) PARAM_NAME(salt_bytes)
+#define PARAM_sk_seed_bytes(p) PARAM_NAME(sk_seed_bytes)
+#define PARAM_digest_bytes(p) PARAM_NAME(digest_bytes)
+#define PARAM_pk_seed_bytes(p) PARAM_NAME(pk_seed_bytes)
+#define PARAM_f_tail(p) f_tail
 
 /**
  * Struct defining MAYO parameters
@@ -234,7 +267,13 @@ extern const mayo_params_t MAYO_5;
  * @param[out] sk Mayo secret key
  * @return int status code
  */
+#define mayo_keypair MAYO_NAMESPACE(mayo_keypair)
 int mayo_keypair(const mayo_params_t *p, unsigned char *pk, unsigned char *sk);
+
+#define mayo_sign_signature MAYO_NAMESPACE(mayo_sign_signature)
+int mayo_sign_signature(const mayo_params_t *p, unsigned char *sig,
+              size_t *siglen, const unsigned char *m,
+              size_t mlen, const unsigned char *csk);
 
 /**
  * MAYO signature generation.
@@ -251,9 +290,10 @@ int mayo_keypair(const mayo_params_t *p, unsigned char *pk, unsigned char *sk);
  * @param[in] sk Compacted secret key
  * @return int status code
  */
+#define mayo_sign MAYO_NAMESPACE(mayo_sign)
 int mayo_sign(const mayo_params_t *p, unsigned char *sm,
-              unsigned long long *smlen, const unsigned char *m,
-              unsigned long long mlen, const unsigned char *sk);
+              size_t *smlen, const unsigned char *m,
+              size_t mlen, const unsigned char *sk);
 
 /**
  * Mayo open signature.
@@ -270,9 +310,10 @@ int mayo_sign(const mayo_params_t *p, unsigned char *sm,
  * @param[in] pk Compacted public key
  * @return int status code
  */
+#define mayo_open MAYO_NAMESPACE(mayo_open)
 int mayo_open(const mayo_params_t *p, unsigned char *m,
-              unsigned long long *mlen, const unsigned char *sm,
-              unsigned long long smlen, const unsigned char *pk);
+              size_t *mlen, const unsigned char *sm,
+              size_t smlen, const unsigned char *pk);
 
 /**
  * Mayo compact keypair generation.
@@ -288,6 +329,7 @@ int mayo_open(const mayo_params_t *p, unsigned char *m,
  * @param[out] csk Mayo compacted secret key
  * @return int status code
  */
+#define mayo_keypair_compact MAYO_NAMESPACE(mayo_keypair_compact)
 int mayo_keypair_compact(const mayo_params_t *p, unsigned char *cpk,
                          unsigned char *csk);
 
@@ -302,6 +344,7 @@ int mayo_keypair_compact(const mayo_params_t *p, unsigned char *cpk,
  * @param[out] epk Expanded public key.
  * @return int return code
  */
+#define mayo_expand_pk MAYO_NAMESPACE(mayo_expand_pk)
 int mayo_expand_pk(const mayo_params_t *p, const unsigned char *cpk,
                    unsigned char *epk);
 
@@ -316,6 +359,7 @@ int mayo_expand_pk(const mayo_params_t *p, const unsigned char *cpk,
  * @param[out] esk Expanded secret key.
  * @return int return code
  */
+#define mayo_expand_sk MAYO_NAMESPACE(mayo_expand_sk)
 int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
                    sk_t *esk);
 
@@ -332,8 +376,10 @@ int mayo_expand_sk(const mayo_params_t *p, const unsigned char *csk,
  * @param[in] pk Compacted public key
  * @return int 0 if verification succeeded, 1 otherwise.
  */
+#define mayo_verify MAYO_NAMESPACE(mayo_verify)
 int mayo_verify(const mayo_params_t *p, const unsigned char *m,
-                unsigned long long mlen, const unsigned char *sig,
+                size_t mlen, const unsigned char *sig,
                 const unsigned char *pk);
 
 #endif
+

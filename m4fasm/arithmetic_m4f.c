@@ -13,21 +13,26 @@
 // -----------------------------------------------------------------------------------------
 
 
-void m_upper(int m_legs, const uint64_t *in, uint64_t *out, int size) {
+void m_upper(const mayo_params_t* p, const uint64_t *in, uint64_t *out, int size) {
+    #ifndef ENABLE_PARAMS_DYNAMIC
+    (void) p;
+    #endif
+    // Look into AVX2'ing this 
+    const int m_vec_limbs = PARAM_m_vec_limbs(p);
     int m_vecs_stored = 0;
     for (int r = 0; r < size; r++) {
         for (int c = r; c < size; c++) {
-            m_vec_copy(m_legs, in + m_legs * 2 * (r * size + c), out + m_legs * 2 * m_vecs_stored );
+            m_vec_copy(in + m_vec_limbs * (r * size + c), out + m_vec_limbs * m_vecs_stored );
             if (r != c) {
-                m_vec_add(m_legs, in + m_legs * 2 * (c * size + r), out + m_legs * 2 * m_vecs_stored );
+                m_vec_add(in + m_vec_limbs * (c * size + r), out + m_vec_limbs * m_vecs_stored );
             }
             m_vecs_stored ++;
         }
     }
 }
 
-
-
+// TODO: optimize
+/*
 // multiplies the transpose of a single matrix with m matrices and adds result to acc
 static void mul_add_mat_trans_x_m_mat(int m_legs, const unsigned char *mat, const uint64_t *bs_mat, uint64_t *acc, int mat_rows, int mat_cols, int bs_mat_cols) {
     (void) m_legs;
@@ -37,6 +42,7 @@ static void mul_add_mat_trans_x_m_mat(int m_legs, const unsigned char *mat, cons
     mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm(acc, mat, bs_mat);
 
 }
+*/
 
 
 // -----------------------------------------------------------------------------------------
@@ -44,6 +50,8 @@ static void mul_add_mat_trans_x_m_mat(int m_legs, const unsigned char *mat, cons
 // -----------------------------------------------------------------------------------------
 
 // multiplies a single matrix with m matrices and adds result to acc
+// TODO: optimize
+/*
 void mul_add_mat_x_m_mat(int m_legs, const unsigned char *mat, const uint32_t *bs_mat, uint32_t *acc, int mat_rows, int mat_cols, int bs_mat_cols) {
   (void) m_legs;
   if(mat_rows == K_MAX && mat_cols == V_MAX && bs_mat_cols == O_MAX){
@@ -52,8 +60,10 @@ void mul_add_mat_x_m_mat(int m_legs, const unsigned char *mat, const uint32_t *b
     mul_add_mat_x_m_mat_m4f_K_V_K_triangular_asm(acc, mat, bs_mat);
   }
 }
+*/
 
-
+// TODO: optimize
+/*
 static void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const int dim1){
   const int v = dim0;
   const int o = dim1;
@@ -154,9 +164,10 @@ void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned ch
     multiply_P1P1t_right_notbitsliced_m4f(P1_O, (uint32_t *)P1, O_packed, V_MAX, O_MAX, M_MAX);
     repack_add((uint32_t *)acc, P1_O, V_MAX, O_MAX);
 }
+*/
 
-
-
+// TODO: optimize
+/*
 static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const uint32_t *P1, const unsigned char *O, const int v, const int o, const int m){
     const int o_size = (o+7)/8;
     const int m_bytes = m / 2;
@@ -187,9 +198,10 @@ void P1_times_Vt(const mayo_params_t* p, const uint32_t* P1, const unsigned char
 
     repack_add(acc, P1_Vt, V_MAX, K_MAX);
 }
+*/
 
-
-
+// TODO: optimize
+/*
 static void multiply_P1_right_notbitsliced_m4f(uint32_t *P2, const uint32_t *P1, const unsigned char *O, const int v, const int o, const int m){
     const int o_size = (o+7)/8;
     const int m_bytes = m / 2;
@@ -225,13 +237,15 @@ void P1_times_O(const mayo_params_t* p, const uint32_t* P1, const unsigned char*
     repack_add(acc, P1_O, V_MAX, O_MAX);
 
 }
-
+*/
 
 
 
 
 // put matrix in row echelon form with ones on first nonzero entries *in
 // constant time*
+// TODO: optimize
+/*
 static void EF_m4f(unsigned char *A, int nrows, int ncols) {
 
     uint32_t _pivot_row[(K_MAX * O_MAX + 1 + 31) / 32 * 4];
@@ -281,7 +295,7 @@ static void EF_m4f(unsigned char *A, int nrows, int ncols) {
     for (int i = 0; i < nrows; i++) {
         ef_unbitslice_asm(A + i*ncols, bitsliced_A + i * legs * 4);
     }
-}
+} */
 
 // sample a solution x to Ax = y, with r used as randomness
 // require:
@@ -290,6 +304,8 @@ static void EF_m4f(unsigned char *A, int nrows, int ncols) {
 // - y is a vector with m elements
 // - r and x are k*o bytes long
 // return: 1 on success, 0 on failure
+// TODO: optimize
+/*
 int sample_solution(const mayo_params_t *p, unsigned char *A,
                            const unsigned char *y, const unsigned char *r,
                            unsigned char *x, int _k, int _o, int _m, int _A_cols ) {
@@ -365,11 +381,13 @@ int sample_solution(const mayo_params_t *p, unsigned char *A,
     return 1;
 }
 
-
+*/
 
 
 // compute P * S^t = [ P1  P2 ] * [S1] = [P1*S1 + P2*S2]
 //                   [  0  P3 ]   [S2]   [        P3*S2]
+// TODO: optimize
+/*
 void m_calculate_PS(const uint32_t *P1, const uint32_t *P2, const uint32_t *P3, const unsigned char *S,
                               const int _m, const int _v, const int _o, const int _k, uint32_t *PS) {
     (void) _m;
@@ -384,28 +402,6 @@ void m_calculate_PS(const uint32_t *P1, const uint32_t *P2, const uint32_t *P3, 
 
     const int m_legs = m / 32;                                
     const int n = o + v;
-
-    /* Old approach which is constant time but doesn't have to be
-    unsigned char S1[V_MAX*K_MAX];
-    unsigned char S2[O_MAX*K_MAX];
-    unsigned char *s1_write = S1;
-    unsigned char *s2_write = S2;
-    for (int r=0; r < k; r++)
-    {
-        for (int c = 0; c < n; c++)
-        {
-            if(c < v){
-                *(s1_write++) = S[r*n + c];
-            } else {
-                *(s2_write++) = S[r*n + c];
-            }
-        }
-    }
-
-    mul_add_bitsliced_m_upper_triangular_mat_x_mat_trans(m_legs, P1, S1, PS, v, v, k, 1); // P1 * S1
-    mul_add_bitsliced_m_upper_triangular_mat_x_mat_trans(m_legs, P2, S2, PS, v, o, k, 0); // P2 * S2
-    mul_add_bitsliced_m_upper_triangular_mat_x_mat_trans(m_legs, P3, S2, PS + v*k*m_legs*4, o, o, k, 1); // P3 * S2
-    */
 
       // use more stack efficient version for MAYO_3 and MAYO_5
     #if defined(PQM4) && N_MAX > 78
@@ -463,9 +459,11 @@ void m_calculate_PS(const uint32_t *P1, const uint32_t *P2, const uint32_t *P3, 
     multiply_bins_asm(PS, accumulator, n*k);
 
     #endif
-}
+} 
+*/
 
-
+// TODO: optimize
+/*
 void m_calculate_SPS(const uint32_t *PS, const unsigned char *S, int _m, int _k, int  _n, uint32_t *SPS){
     (void) _n;
     (void) _m;
@@ -483,8 +481,11 @@ void m_calculate_SPS(const uint32_t *PS, const unsigned char *S, int _m, int _k,
 
     multiply_bins_asm(SPS, accumulator, k*k);
 }
+*/
 
 
+// TODO: optimize
+/*
 void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
                               const int m, const int v, const int o, const int k, uint64_t *SPS) {
 
@@ -498,9 +499,11 @@ void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *
     m_calculate_PS((uint32_t *)P1, (uint32_t *)P2, (uint32_t *)P3, S, m, v, o, k, PS);
     m_calculate_SPS(PS, S, m, k, v+o, (uint32_t *)SPS);
 }
+*/
 
 
-
+// TODO: optimize
+/*
 void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, const unsigned char* V, uint64_t* M, const uint64_t* P1, uint64_t* Y) {
         alignas (32) uint32_t Pv[N_MINUS_O_MAX * K_MAX * M_MAX / 8] = {0};
         const int param_k = K_MAX;
@@ -518,8 +521,11 @@ void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, c
                                       (uint32_t *) Y, param_k, param_n - param_o,
                                       param_k);
 }
+*/
 
 
+// TODO: optimize
+/*
 void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* P1O_P2, uint64_t* P3){
     const int param_m = M_MAX;
     const int m_legs = param_m / 32;
@@ -530,4 +536,260 @@ void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned 
     // compute P3 = O^t * (P1*O + P2)
     mul_add_mat_trans_x_m_mat(m_legs, O, P1O_P2, P3, param_v, param_o, param_o);
 }
+*/
 
+// TODO: remove those generic functions
+
+void m_calculate_SPS(const uint64_t *PS, const unsigned char *S, int m, int k, int  n, uint64_t *SPS) {
+    mayo_generic_m_calculate_SPS(PS, S, m, k, n, SPS);
+}
+
+void m_calculate_PS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
+                    const int m, const int v, const int o, const int k, uint64_t *PS) {
+    mayo_generic_m_calculate_PS(P1, P2, P3, S, m, v, o, k, PS);
+}
+
+
+
+// a > b -> b - a is negative
+// returns 0xFFFFFFFF if true, 0x00000000 if false
+static inline uint64_t ct_64_is_greater_than(int a, int b) {
+    int64_t diff = ((int64_t) b) - ((int64_t) a);
+    return (uint64_t) (diff >> (8*sizeof(uint64_t)-1));
+}
+
+// if a == b -> 0x00, else 0xFF
+static inline unsigned char ct_compare_8(unsigned char a, unsigned char b) {
+    return (int8_t)((-(int32_t)(a ^ b)) >> (8*sizeof(uint32_t)-1));
+}
+
+// if a == b -> 0x0000000000000000, else 0xFFFFFFFFFFFFFFFF
+static inline uint64_t ct_compare_64(int a, int b) {
+    return (uint64_t)((-(int64_t)(a ^ b)) >> (8*sizeof(uint64_t)-1));
+}
+
+static inline unsigned char
+m_extract_element(const uint64_t *in, int index) {
+    const int leg = index / 16;
+    const int offset = index % 16;
+
+    return (in[leg] >> (offset*4)) & 0xF;
+}
+
+static inline void
+ef_pack_m_vec(const unsigned char *in, uint64_t *out, int ncols) {
+    int i;
+    unsigned char *out8 = (unsigned char *)out;
+    for(i = 0; i+1 < ncols; i += 2){
+        out8[i/2]  = (in[i+0] << 0) | (in[i+1] << 4);
+    }
+    if (ncols % 2 == 1){
+        out8[i/2]  = (in[i+0] << 0);
+    }
+}
+
+static inline void
+ef_unpack_m_vec(int legs, const uint64_t *in, unsigned char *out) {
+    const unsigned char *in8 = (const unsigned char *)in;
+    for(int i = 0; i < legs * 16; i += 2){
+        out[i]   = (in8[i/2]) & 0xF;
+        out[i+1] = (in8[i/2] >> 4);
+    }
+}
+
+
+
+// put matrix in row echelon form with ones on first nonzero entries *in
+// constant time*
+static inline void EF(unsigned char *A, int nrows, int ncols) {
+
+    uint64_t _pivot_row[(K_MAX * O_MAX + 1 + 15) / 16];
+    uint64_t _pivot_row2[(K_MAX * O_MAX + 1 + 15) / 16];
+    uint64_t packed_A[((K_MAX * O_MAX + 1 + 15) / 16) * M_MAX] = {0};
+
+    int row_len = (ncols + 15) / 16;
+
+    // nibbleslice the matrix A
+    for (int i = 0; i < nrows; i++) {
+        ef_pack_m_vec(A + i * ncols, packed_A + i * row_len, ncols);
+    }
+
+    // pivot row is secret, pivot col is not
+
+    unsigned char inverse;
+    int pivot_row = 0;
+    for (int pivot_col = 0; pivot_col < ncols; pivot_col++) {
+
+        int pivot_row_lower_bound = MAYO_MAX(0, pivot_col + nrows - ncols);
+        int pivot_row_upper_bound = MAYO_MIN(nrows - 1, pivot_col);
+        // the pivot row is guaranteed to be between these lower and upper bounds if
+        // A has full rank
+
+        // zero out pivot row
+        for (int i = 0; i < row_len; i++) {
+            _pivot_row[i] = 0;
+            _pivot_row2[i] = 0;
+        }
+
+        // try to get a pivot row in constant time
+        unsigned char pivot = 0;
+        uint64_t pivot_is_zero = -1;
+        for (int row = pivot_row_lower_bound;
+                row <= MAYO_MIN(nrows - 1, pivot_row_upper_bound + 32); row++) {
+
+            uint64_t is_pivot_row = ~ct_compare_64(row, pivot_row);
+            uint64_t below_pivot_row = ct_64_is_greater_than(row, pivot_row);
+
+            for (int j = 0; j < row_len; j++) {
+                _pivot_row[j] ^= (is_pivot_row | (below_pivot_row & pivot_is_zero)) &
+                                 packed_A[row * row_len + j];
+            }
+            pivot = m_extract_element(_pivot_row, pivot_col);
+            pivot_is_zero = ~ct_compare_64((int) pivot, 0);
+        }
+
+        // multiply pivot row by inverse of pivot
+        inverse = inverse_f(pivot);
+        vec_mul_add_u64(row_len, _pivot_row, inverse, _pivot_row2);
+
+        // conditionally write pivot row to the correct row, if there is a nonzero
+        // pivot
+        for (int row = pivot_row_lower_bound; row <= pivot_row_upper_bound; row++) {
+            uint64_t do_copy = ~ct_compare_64(row, pivot_row) & ~pivot_is_zero;
+            uint64_t do_not_copy = ~do_copy;
+            for (int col = 0; col < row_len; col++) {
+                packed_A[row * row_len + col] =
+                    (do_not_copy & packed_A[row * row_len + col]) +
+                    (do_copy & _pivot_row2[col]);
+            }
+        }
+
+        // eliminate entries below pivot
+        for (int row = pivot_row_lower_bound; row < nrows; row++) {
+            unsigned char below_pivot = (row > pivot_row);
+            unsigned char elt_to_elim = m_extract_element(packed_A + row * row_len, pivot_col);
+
+            vec_mul_add_u64(row_len, _pivot_row2, below_pivot * elt_to_elim,
+                                    packed_A + row * row_len);                            
+        }
+
+        pivot_row += (-(int32_t)(~pivot_is_zero));
+    }
+
+    unsigned char temp[(O_MAX * K_MAX + 1 + 15)];
+
+    // unbitslice the matrix A
+    for (int i = 0; i < nrows; i++) {
+        ef_unpack_m_vec(row_len, packed_A + i * row_len, temp);
+        for (int j = 0; j < ncols; j++) {
+            A[i * ncols + j] = temp[j];
+        }
+    }
+}
+inline void vec_mul_add_u64(const int legs, const uint64_t *in, unsigned char a, uint64_t *acc) {
+    uint32_t tab = mul_table(a);
+
+    uint64_t lsb_ask = 0x1111111111111111ULL;
+
+    for(int i=0; i < legs; i++){
+        acc[i] ^= ( in[i]       & lsb_ask) * (tab & 0xff)
+                ^ ((in[i] >> 1) & lsb_ask) * ((tab >> 8)  & 0xf)
+                ^ ((in[i] >> 2) & lsb_ask) * ((tab >> 16) & 0xf)
+                ^ ((in[i] >> 3) & lsb_ask) * ((tab >> 24) & 0xf);
+    }
+}
+
+
+// sample a solution x to Ax = y, with r used as randomness
+// require:
+// - A is a matrix with m rows and k*o+1 collumns (values in the last collum are
+// not important, they will be overwritten by y) in row major order
+// - y is a vector with m elements
+// - r and x are k*o bytes long
+// return: 1 on success, 0 on failure
+int sample_solution(const mayo_params_t *p, unsigned char *A,
+                           const unsigned char *y, const unsigned char *r,
+                           unsigned char *x, int k, int o, int m, int A_cols) {
+    #ifdef MAYO_VARIANT
+    (void) p;
+    #endif
+
+    unsigned char finished;
+    int col_upper_bound;
+    unsigned char correct_column;
+
+    // x <- r
+    for (int i = 0; i < k * o; i++) {
+        x[i] = r[i];
+    }
+
+    // compute Ar;
+    unsigned char Ar[M_MAX];
+    for (int i = 0; i < m; i++) {
+        A[k * o + i * (k * o + 1)] = 0; // clear last col of A
+    }
+    mat_mul(A, r, Ar, k * o + 1, m, 1);
+
+    // move y - Ar to last column of matrix A
+    for (int i = 0; i < m; i++) {
+        A[k * o + i * (k * o + 1)] = sub_f(y[i], Ar[i]);
+    }
+
+    EF(A, m, k * o + 1);
+
+    // check if last row of A (excluding the last entry of y) is zero
+    unsigned char full_rank = 0;
+    for (int i = 0; i < A_cols - 1; i++) {
+        full_rank |= A[(m - 1) * A_cols + i];
+    }
+
+// It is okay to leak if we need to restart or not
+#ifdef ENABLE_CT_TESTING
+    VALGRIND_MAKE_MEM_DEFINED(&full_rank, 1);
+#endif
+
+    if (full_rank == 0) {
+        return 0;
+    }
+
+    // back substitution in constant time
+    // the index of the first nonzero entry in each row is secret, which makes
+    // things less efficient
+
+    for (int row = m - 1; row >= 0; row--) {
+        finished = 0;
+        col_upper_bound = MAYO_MIN(row + (32/(m-row)), k*o);
+        // the first nonzero entry in row r is between r and col_upper_bound with probability at least ~1-q^{-32}
+
+        for (int col = row; col <= col_upper_bound; col++) {
+
+            // Compare two chars in constant time.
+            // Returns 0x00 if the byte arrays are equal, 0xff otherwise.
+            correct_column = ct_compare_8((A[row * A_cols + col]), 0) & ~finished;
+
+            unsigned char u = correct_column & A[row * A_cols + A_cols - 1];
+            x[col] ^= u;
+
+            for (int i = 0; i < row; i += 8) {
+                uint64_t tmp = ( (uint64_t) A[ i    * A_cols + col] <<  0) ^ ( (uint64_t) A[(i+1) * A_cols + col] <<  8)
+                             ^ ( (uint64_t) A[(i+2) * A_cols + col] << 16) ^ ( (uint64_t) A[(i+3) * A_cols + col] << 24)
+                             ^ ( (uint64_t) A[(i+4) * A_cols + col] << 32) ^ ( (uint64_t) A[(i+5) * A_cols + col] << 40)
+                             ^ ( (uint64_t) A[(i+6) * A_cols + col] << 48) ^ ( (uint64_t) A[(i+7) * A_cols + col] << 56);
+
+                tmp = mul_fx8(u, tmp);
+
+                A[ i    * A_cols + A_cols - 1] ^= (tmp      ) & 0xf;
+                A[(i+1) * A_cols + A_cols - 1] ^= (tmp >> 8 ) & 0xf;
+                A[(i+2) * A_cols + A_cols - 1] ^= (tmp >> 16) & 0xf;
+                A[(i+3) * A_cols + A_cols - 1] ^= (tmp >> 24) & 0xf;
+                A[(i+4) * A_cols + A_cols - 1] ^= (tmp >> 32) & 0xf;
+                A[(i+5) * A_cols + A_cols - 1] ^= (tmp >> 40) & 0xf;
+                A[(i+6) * A_cols + A_cols - 1] ^= (tmp >> 48) & 0xf;
+                A[(i+7) * A_cols + A_cols - 1] ^= (tmp >> 56) & 0xf;
+            }
+
+            finished = finished | correct_column;
+        }
+    }
+    return 1;
+}

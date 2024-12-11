@@ -17,7 +17,7 @@ void m_upper(const mayo_params_t *p, const uint64_t *in, uint64_t *out, int size
 #ifndef ENABLE_PARAMS_DYNAMIC
     (void)p;
 #endif
-    // Look into AVX2'ing this
+    // TODO: check if this is worthwhile to optimize or fine
     const int m_vec_limbs = PARAM_m_vec_limbs(p);
     int m_vecs_stored = 0;
     for (int r = 0; r < size; r++)
@@ -34,22 +34,22 @@ void m_upper(const mayo_params_t *p, const uint64_t *in, uint64_t *out, int size
     }
 }
 
-// TODO: optimize
-/*
-// multiplies the transpose of a single matrix with m matrices and adds result to acc
-static void mul_add_mat_trans_x_m_mat(int m_legs, const unsigned char *mat, const uint64_t *bs_mat, uint64_t *acc, int mat_rows, int mat_cols, int bs_mat_cols) {
-    (void) m_legs;
-    (void) mat_rows;
-    (void) mat_cols;
-    (void) bs_mat_cols;
-    mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm(acc, mat, bs_mat);
-
-}
-*/
 
 // -----------------------------------------------------------------------------------------
 // OPTIMIZED ARITHMETIC
 // -----------------------------------------------------------------------------------------
+
+// multiplies the transpose of a single matrix with m matrices and adds result to acc
+// TODO: make this static again once it's used in computing P3
+void mul_add_mat_trans_x_m_mat(const int m_vec_limbs, const unsigned char *mat, const uint64_t *bs_mat, uint64_t *acc,
+                               const int mat_rows, const int mat_cols, const int bs_mat_cols) {
+    (void) m_vec_limbs;
+    (void) mat_rows;
+    (void) mat_cols;
+    (void) bs_mat_cols;
+
+    mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm(acc, mat, bs_mat);
+}
 
 // multiplies a single matrix with m matrices and adds result to acc
 // TODO: optimize

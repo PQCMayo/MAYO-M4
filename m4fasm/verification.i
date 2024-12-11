@@ -1,6 +1,7 @@
 
 // TODO: elimninate include; pass as args
  #include "asm_params.h"
+ /*
  .macro macro_calculate_PS_m4f_asm m_legs, n, k
     push.w {r4-r11, r14}
     accu0 .req r3
@@ -65,8 +66,10 @@
 
     pop.w {r4-r11, pc}
 .endm
+*/
 
- .macro macro_calculate_PS_m4f_stack_asm m_legs, n, k
+
+ .macro macro_calculate_PS_m4f_stack_asm m_vec_limbs, n, k
     push.w {r4-r11, r14}
     accu0 .req r3
     accu1 .req r4
@@ -79,40 +82,28 @@
     mat3 .req r10
 
     add.w r11, r2, r3
-    mov.w r14, 16*\m_legs
-
+    mov.w r14, 8*\m_vec_limbs
 
     1:
     ldrb.w r12, [r2], #1
     mla.w r12, r14, r12, r0
+    // TODO: this is not using all register; can pipeline this much better by doing 2 iterations in one
+    .rept \m_vec_limbs
+        ldr.w mat1, [r1, #4]
+        ldr.w mat0, [r1], #8
 
-    .set i, 0
-    .rept \m_legs
-        ldr.w mat1, [r1, #1*4*\m_legs]
-        ldr.w mat2, [r1, #2*4*\m_legs]
-        ldr.w mat3, [r1, #3*4*\m_legs]
-        ldr.w mat0, [r1], #4
-
-        ldr.w accu0, [r12, #0*4*\m_legs]
-        ldr.w accu1, [r12, #1*4*\m_legs]
-        ldr.w accu2, [r12, #2*4*\m_legs]
-        ldr.w accu3, [r12, #3*4*\m_legs]
+        ldr.w accu0, [r12, #0*4]
+        ldr.w accu1, [r12, #1*4]
 
         eor.w accu0, mat0
         eor.w accu1, mat1
-        eor.w accu2, mat2
-        eor.w accu3, mat3
 
-        str.w accu1, [r12, #1*4*\m_legs]
-        str.w accu2, [r12, #2*4*\m_legs]
-        str.w accu3, [r12, #3*4*\m_legs]
-        str.w accu0, [r12], #4
+        str.w accu1, [r12, #1*4]
+        str.w accu0, [r12], #8
     .endr
 
-    add.w r1, r1, 16*\m_legs - \m_legs*4
-
-    cmp.w r2, r11
-    bne.w 1b
+   cmp.w r2, r11
+   bne.w 1b
 
     pop.w {r4-r11, pc}
 .endm
@@ -188,8 +179,8 @@
     eor.w \out, \out, \tmp, lsl#1
 .endm
 
-.macro multiply_bins_load out, addr, idx
-    ldr.w \out, [\addr, (\idx-1)*16*(M/32)]
+.macro multiply_bins_load out, addr, idx, m_vec_limbs
+    ldr.w \out, [\addr, (\idx-1)* (\m_vec_limbs*8)]
 .endm
 
 .macro multiply_bins_load_incr out, addr
@@ -198,7 +189,7 @@
 
 
 
-.macro multiply_bins out, in, t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10
+.macro multiply_bins out, in, t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, m_vec_limbs
     bin2 .req \t10
     bin3 .req \t0
     bin4 .req \t1
@@ -211,17 +202,17 @@
     bin14 .req \t8
     bin15 .req \t9
 
-    multiply_bins_load bin2, \in, 2
-    multiply_bins_load bin3, \in, 3
-    multiply_bins_load bin4, \in, 4
-    multiply_bins_load bin6, \in, 6
-    multiply_bins_load bin7, \in, 7
-    multiply_bins_load bin8, \in, 8
-    multiply_bins_load bin10, \in, 10
-    multiply_bins_load bin12, \in, 12
-    multiply_bins_load bin13, \in, 13
-    multiply_bins_load bin14, \in, 14
-    multiply_bins_load bin15, \in, 15
+    multiply_bins_load bin2, \in, 2, \m_vec_limbs
+    multiply_bins_load bin3, \in, 3, \m_vec_limbs
+    multiply_bins_load bin4, \in, 4, \m_vec_limbs
+    multiply_bins_load bin6, \in, 6, \m_vec_limbs
+    multiply_bins_load bin7, \in, 7, \m_vec_limbs
+    multiply_bins_load bin8, \in, 8, \m_vec_limbs
+    multiply_bins_load bin10, \in, 10, \m_vec_limbs
+    multiply_bins_load bin12, \in, 12, \m_vec_limbs
+    multiply_bins_load bin13, \in, 13, \m_vec_limbs
+    multiply_bins_load bin14, \in, 14, \m_vec_limbs
+    multiply_bins_load bin15, \in, 15, \m_vec_limbs
 
     // m_vec_add(m_legs, bins + 15 * m_legs * 4, bins + 12 * m_legs * 4);
     // m_vec_add(m_legs, bins + 15 * m_legs * 4, bins +  3 * m_legs * 4);
@@ -264,10 +255,10 @@
 
     // // free: t9, t8, t7, t6, t3
 
-    multiply_bins_load bin5, \in, 5
-    multiply_bins_load bin7, \in, 7
-    multiply_bins_load bin9, \in, 9
-    multiply_bins_load bin11, \in, 11
+    multiply_bins_load bin5, \in, 5, \m_vec_limbs
+    multiply_bins_load bin7, \in, 7, \m_vec_limbs
+    multiply_bins_load bin9, \in, 9, \m_vec_limbs
+    multiply_bins_load bin11, \in, 11, \m_vec_limbs
     multiply_bins_load_incr bin1, \in
 
     // m_vec_add(m_legs, bins + 11 * m_legs * 4, bins +  9 * m_legs * 4);
@@ -325,37 +316,36 @@
     .unreq bin11
 .endm
 
-.macro macro_multiply_bins_asm m
-    .set m_legs, (\m/32)
-    push.w {r4-r11, r14}
-    add.w r1, (\m/32)*16
-    mov.w r14, r2
-    1:
-    .rept (\m/8)
-    multiply_bins r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12
-    .endr
-    add.w r1, 4*16*4*m_legs - (\m/8)*4
-    add.w r0, 8*2*m_legs - (\m/8)*4
+// TODO: remove
+// .macro macro_multiply_bins_asm m
+//     .set m_legs, (\m/32)
+//     push.w {r4-r11, r14}
+//     add.w r1, (\m/32)*16
+//     mov.w r14, r2
+//     1:
+//     .rept (\m/8)
+//     multiply_bins r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12
+//     .endr
+//     add.w r1, 4*16*4*m_legs - (\m/8)*4
+//     add.w r0, 8*2*m_legs - (\m/8)*4
 
-    subs.w r14, #1
-    bne 1b
+//     subs.w r14, #1
+//     bne 1b
 
-    pop.w {r4-r11, pc}
-.endm
+//     pop.w {r4-r11, pc}
+// .endm
 
 .macro macro_multiply_bins_stack_asm m, k
-    .set m_legs, (\m/32)
+    .set m_vec_limbs, ((\m + 15)/16)
     push.w {r4-r11, r14}
-    add.w r1, (\m/32)*16
-
+    add.w r1, m_vec_limbs*8
     mov.w r14, r2
     1:
-    .rept (\m/8)
-    multiply_bins r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12
+    .rept m_vec_limbs * 2
+    multiply_bins r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, m_vec_limbs
     .endr
-    add.w r1, 4*16*4*m_legs - (\m/8)*4
-    add.w r0, 8*2*\k*m_legs- (\m/8)*4
-
+    add.w r1, 16 * 8 * m_vec_limbs - m_vec_limbs*8
+    add.w r0, \k * 8 * m_vec_limbs - m_vec_limbs*8
     subs.w r14, #1
     bne 1b
 

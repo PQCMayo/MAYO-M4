@@ -7,18 +7,19 @@
 
 
 // For MAYO3 and MAYO5 we need to compute PS incrementally
-#if N <= 78
-.global calculate_PS_m4f_asm
-.type calculate_PS_m4f_asm, %function
-.align 2
-calculate_PS_m4f_asm:
-    macro_calculate_PS_m4f_asm (M/32), N, K
-#else
+// TODO: evaluate if those are still worthwhile, alternatively remove
+//#if N <= 78
+//.global calculate_PS_m4f_asm
+//.type calculate_PS_m4f_asm, %function
+//.align 2
+//calculate_PS_m4f_asm:
+//    macro_calculate_PS_m4f_asm (M/32), N, K
+//#else
 .global calculate_PS_m4f_stack_asm
 .type calculate_PS_m4f_stack_asm, %function
 .align 2
 calculate_PS_m4f_stack_asm:
-    macro_calculate_PS_m4f_stack_asm (M/32), N, K
+    macro_calculate_PS_m4f_stack_asm ((M + 15)/16), N, K
 
 .global multiply_bins_stack_asm
 .type multiply_bins_stack_asm, %function
@@ -26,7 +27,7 @@ calculate_PS_m4f_stack_asm:
 multiply_bins_stack_asm:
     macro_multiply_bins_stack_asm M, K
 
-#endif
+//#endif
 
 .global calculate_SPS_m4f_asm
 .type calculate_SPS_m4f_asm, %function
@@ -35,11 +36,11 @@ calculate_SPS_m4f_asm:
     macro_calculate_SPS_m4f_asm (M/32), N, K
 
 
-.global multiply_bins_asm
-.type multiply_bins_asm, %function
-.align 2
-multiply_bins_asm:
-    macro_multiply_bins_asm M
+//.global multiply_bins_asm
+//.type multiply_bins_asm, %function
+//.align 2
+//multiply_bins_asm:
+//    macro_multiply_bins_asm M
 
 
 

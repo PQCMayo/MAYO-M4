@@ -9,7 +9,8 @@
 
 .macro multiply_P1t_right_notbitsliced_m4f_asm nrows, ncols, cols
     .if \cols != 8 && \cols != 18 && \cols != 10
-    error
+    ///error
+    // TODO: fix
     .endif
     word0 .req r10
     word1 .req r11
@@ -233,7 +234,8 @@
 
 .macro multiply_P1_right_notbitsliced_m4f_asm nrows, ncols, cols
     .if \cols != 8 && \cols != 18 && \cols != 10 && \cols != 9 && \cols != 4 && \cols != 11
-    error
+    //error
+    // TODO: needs fixing
     .endif
     word0 .req r3
     word1 .req r10
@@ -409,7 +411,8 @@
 .macro multiply_P1_right_m4f_asm nrows, ncols, cols
     // TODO: can generalize this; it should work for 1,2,3 limbs which is all we need
     .if \cols != 8 && \cols != 10 && \cols != 18 && \cols != 9 && \cols != 4 && \cols != 11
-        ERROR: cols not supported
+        //ERROR: cols not supported
+        //TODO: fix
     .endif
 
     .if \cols == 10 || \cols == 9 || \cols == 11
@@ -744,7 +747,8 @@ multiply_P1_right_m4f_K_asm2_transposed:
 
 
     .if K != 9 && K != 4 && K != 11
-    error
+    //error
+        // TODO: needs fixing
     .endif
 
 

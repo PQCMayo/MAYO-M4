@@ -447,24 +447,6 @@ void m_calculate_SPS(const uint64_t *PS, const unsigned char *S, int _m, int _k,
     multiply_bins_asm(SPS, accumulator, k*k);
 }
 
-
-// TODO: optimize
-/*
-void m_calculate_PS_SPS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
-                              const int m, const int v, const int o, const int k, uint64_t *SPS) {
-
-    (void) m;
-    (void) v;
-    (void) o;
-    (void) k;
-    // compute P * S^t = {(P1, P2), (0, P3)} * S^t = {(P1*S1 + P2*S2), (P3 * S2)}
-    alignas (32) uint32_t PS[N_MAX * K_MAX * M_MAX / 8];
-
-    m_calculate_PS((uint32_t *)P1, (uint32_t *)P2, (uint32_t *)P3, S, m, v, o, k, PS);
-    m_calculate_SPS(PS, S, m, k, v+o, (uint32_t *)SPS);
-}
-*/
-
 // TODO: optimize
 /*
 void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, const unsigned char* V, uint64_t* M, const uint64_t* P1, uint64_t* Y) {

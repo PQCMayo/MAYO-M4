@@ -33,14 +33,14 @@ multiply_bins_stack_asm:
 .type calculate_SPS_m4f_asm, %function
 .align 2
 calculate_SPS_m4f_asm:
-    macro_calculate_SPS_m4f_asm (M/32), N, K
+    macro_calculate_SPS_m4f_asm ((M + 15)/16), N, K
 
 
-//.global multiply_bins_asm
-//.type multiply_bins_asm, %function
-//.align 2
-//multiply_bins_asm:
-//    macro_multiply_bins_asm M
+.global multiply_bins_asm
+.type multiply_bins_asm, %function
+.align 2
+multiply_bins_asm:
+    macro_multiply_bins_asm M
 
 
 

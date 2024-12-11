@@ -428,9 +428,7 @@ void m_calculate_PS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, 
     // worthwhile
 }
 
-// TODO: optimize
-/*
-void m_calculate_SPS(const uint32_t *PS, const unsigned char *S, int _m, int _k, int  _n, uint32_t *SPS){
+void m_calculate_SPS(const uint64_t *PS, const unsigned char *S, int _m, int _k, int  _n, uint64_t *SPS){
     (void) _n;
     (void) _m;
     (void) _k;
@@ -438,16 +436,17 @@ void m_calculate_SPS(const uint32_t *PS, const unsigned char *S, int _m, int _k,
     const int m = M_MAX;
     const int k = K_MAX;
 
-    uint32_t accumulator[16*M_MAX*K_MAX*K_MAX/8] = {0};
-    const int m_legs = m/32;
+    uint64_t accumulator[16*((M_MAX+15)/16)*K_MAX*K_MAX] = {0};
+    const int m_vec_limbs = (m + 15)/ 16;
 
     for (int col = 0; col < k; col += 1) {
-        calculate_SPS_m4f_asm(accumulator + ( (col) * 16 )*m_legs * 4, PS + (col) * m_legs * 4, S);
+        calculate_SPS_m4f_asm(accumulator + ( (col) * 16 )*m_vec_limbs, PS + (col) * m_vec_limbs, S);
     }
 
+    // multiply stuff according to the bins of the accumulator and add to PS.
     multiply_bins_asm(SPS, accumulator, k*k);
 }
-*/
+
 
 // TODO: optimize
 /*
@@ -502,11 +501,6 @@ void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned 
 */
 
 // TODO: remove those generic functions
-
-void m_calculate_SPS(const uint64_t *PS, const unsigned char *S, int m, int k, int n, uint64_t *SPS)
-{
-    mayo_generic_m_calculate_SPS(PS, S, m, k, n, SPS);
-}
 
 // a > b -> b - a is negative
 // returns 0xFFFFFFFF if true, 0x00000000 if false

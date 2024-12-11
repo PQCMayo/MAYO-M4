@@ -38,7 +38,7 @@ void calculate_PS_m4f_stack_asm(uint64_t *acc, const uint64_t *P, const unsigned
 void multiply_bins_stack_asm(uint64_t *out, uint64_t *bins, const int cols);
 //#endif
 
-void multiply_bins_asm(uint32_t *out, uint32_t *bins, const int cols);
-void calculate_SPS_m4f_asm(uint32_t *acc, const uint32_t *PS, const unsigned char * S);
+void multiply_bins_asm(uint64_t *out, uint64_t *bins, const int cols);
+void calculate_SPS_m4f_asm(uint64_t *acc, const uint64_t *PS, const unsigned char * S);
 
 #endif

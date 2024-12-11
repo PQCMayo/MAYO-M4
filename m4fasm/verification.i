@@ -108,9 +108,9 @@
     pop.w {r4-r11, pc}
 .endm
 
-.macro macro_calculate_SPS_m4f_asm m_legs, n, k
+.macro macro_calculate_SPS_m4f_asm m_vec_limbs, n, k
     push.w {r4-r11, r14}
-    mov.w r14, 16*\m_legs
+    mov.w r14, 8*\m_vec_limbs
 
     mov.w r11, \n
     1:
@@ -119,34 +119,33 @@
         ldrb.w r12, [r2], \n
         mla.w r12, r14, r12, r0
 
-        .rept \m_legs
-            ldr.w mat1, [r1, #1*4*\m_legs]
-            ldr.w mat2, [r1, #2*4*\m_legs]
-            ldr.w mat3, [r1, #3*4*\m_legs]
-            ldr.w mat0, [r1], #4
+        // TODO: this is not using all register; can pipeline this much better by doing 2 iterations in one
+        .rept \m_vec_limbs
+            ldr.w mat1, [r1, #4]
+            ldr.w mat0, [r1], #8
 
-            ldr.w accu0, [r12, #0*4*\m_legs]
-            ldr.w accu1, [r12, #1*4*\m_legs]
-            ldr.w accu2, [r12, #2*4*\m_legs]
-            ldr.w accu3, [r12, #3*4*\m_legs]
+            ldr.w accu0, [r12, #0*4]
+            ldr.w accu1, [r12, #1*4]
 
             eor.w accu0, mat0
             eor.w accu1, mat1
-            eor.w accu2, mat2
-            eor.w accu3, mat3
 
-            str.w accu1, [r12, #1*4*\m_legs]
-            str.w accu2, [r12, #2*4*\m_legs]
-            str.w accu3, [r12, #3*4*\m_legs]
-            str.w accu0, [r12], #4
+            str.w accu1, [r12, #1*4]
+            str.w accu0, [r12], #8
         .endr
 
         .if i < \k-1
-        add.w r0, \k*16*16*\m_legs
-        sub.w r1, \m_legs*4
+        add.w r0, \k*16*8*\m_vec_limbs
+        sub.w r1, \m_vec_limbs*8
         .else
-        sub.w r0, (\k-1)*\k*16*16*\m_legs
-        add.w r1, \k*\m_legs*16 - \m_legs*4
+            .if (\k-1)*\k*16*8*\m_vec_limbs > 16384
+                // TODO: check if we have extra registers after implementing the other TODO, if so just keep it in registers
+                ldr.w r12, =((\k-1)*\k*16*8*\m_vec_limbs)
+                sub.w r0, r12
+            .else
+                sub.w r0, (\k-1)*\k*16*8*\m_vec_limbs
+            .endif
+        add.w r1, \k*\m_vec_limbs*8 - \m_vec_limbs*8
         .endif
 
         .set i, i+1
@@ -316,24 +315,24 @@
     .unreq bin11
 .endm
 
-// TODO: remove
-// .macro macro_multiply_bins_asm m
-//     .set m_legs, (\m/32)
-//     push.w {r4-r11, r14}
-//     add.w r1, (\m/32)*16
-//     mov.w r14, r2
-//     1:
-//     .rept (\m/8)
-//     multiply_bins r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12
-//     .endr
-//     add.w r1, 4*16*4*m_legs - (\m/8)*4
-//     add.w r0, 8*2*m_legs - (\m/8)*4
+.macro macro_multiply_bins_asm m
+    .set m_vec_limbs, ((\m + 15)/16)
+    push.w {r4-r11, r14}
+    add.w r1, m_vec_limbs*8
+    mov.w r14, r2
+    1:
+    .rept  m_vec_limbs * 2
+    multiply_bins r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, m_vec_limbs
+    .endr
 
-//     subs.w r14, #1
-//     bne 1b
+    add.w r1, 16 * 8 * m_vec_limbs - m_vec_limbs*8
+    add.w r0, 8 * m_vec_limbs - m_vec_limbs*8
 
-//     pop.w {r4-r11, pc}
-// .endm
+    subs.w r14, #1
+    bne 1b
+
+    pop.w {r4-r11, pc}
+.endm
 
 .macro macro_multiply_bins_stack_asm m, k
     .set m_vec_limbs, ((\m + 15)/16)

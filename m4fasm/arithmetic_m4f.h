@@ -5,6 +5,7 @@
 #include "mayo.h"
 
 // M4R
+// TODO: remove all the _notbitsliced_ from the names
 void multiply_P1_right_m4f_O_asm2(uint32_t *table, const unsigned char *O, int col);
 void multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(uint32_t *acc, const uint32_t *table, const uint32_t *P1, int rows);
 void multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm(uint32_t *acc, const uint32_t *table, const uint32_t *P1);
@@ -24,8 +25,8 @@ int     ef_inner4_asm(uint32_t *a_bs, uint32_t *pivot_row, int pivot_row_lower_b
 void    backsub_inner_asm(uint8_t *a1, uint8_t *a2, uint8_t *a3, int correct_column, int r);
 
 // matmul
-void mul_add_mat_x_m_mat_m4f_K_V_O_triangular_asm(uint32_t *acc, const unsigned char *mat, const uint32_t *bs_mat);
-void mul_add_mat_x_m_mat_m4f_K_V_K_triangular_asm(uint32_t *acc, const unsigned char *mat, const uint32_t *bs_mat);
+void mul_add_mat_x_m_mat_m4f_K_V_O_triangular_asm(uint64_t *acc, const unsigned char *mat, const uint64_t *bs_mat);
+void mul_add_mat_x_m_mat_m4f_K_V_K_triangular_asm(uint64_t *acc, const unsigned char *mat, const uint64_t *bs_mat);
 void mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm(uint64_t *acc, const unsigned char *mat, const uint64_t *bs_mat);
 
 

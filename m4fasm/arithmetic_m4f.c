@@ -50,19 +50,23 @@ void mul_add_mat_trans_x_m_mat(const int m_vec_limbs, const unsigned char *mat, 
 
     mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm(acc, mat, bs_mat);
 }
+// TODO: remove
+//void dump_it(void *p1, void *p2, void *p3){
+//    unsigned char str[100];
+//    sprintf(str, "%p %p %p", p1, p2, p3);
+//    hal_send_str(str);
+//}
 
 // multiplies a single matrix with m matrices and adds result to acc
-// TODO: optimize
-/*
-void mul_add_mat_x_m_mat(int m_legs, const unsigned char *mat, const uint32_t *bs_mat, uint32_t *acc, int mat_rows, int mat_cols, int bs_mat_cols) {
-  (void) m_legs;
+// TODO: make this static once it's used inside M4R
+void mul_add_mat_x_m_mat(int m_vec_limbs, const unsigned char *mat, const uint64_t *bs_mat, uint64_t *acc, int mat_rows, int mat_cols, int bs_mat_cols) {
+  (void) m_vec_limbs;
   if(mat_rows == K_MAX && mat_cols == V_MAX && bs_mat_cols == O_MAX){
     mul_add_mat_x_m_mat_m4f_K_V_O_triangular_asm(acc, mat, bs_mat);
   } else if(mat_rows == K_MAX && mat_cols == V_MAX && bs_mat_cols == K_MAX){
     mul_add_mat_x_m_mat_m4f_K_V_K_triangular_asm(acc, mat, bs_mat);
   }
 }
-*/
 
 // TODO: optimize
 /*

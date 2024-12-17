@@ -8,6 +8,7 @@
 
 
 .macro multiply_P1t_right_notbitsliced_m4f_asm nrows, ncols, cols
+    .set m_vec_limbs, ((M + 15)/16)
     // TODO: remove the ones we don't need
     .if \cols != 8 && \cols != 18 && \cols != 17 && \cols != 10
     error
@@ -43,10 +44,10 @@
 
     vmov.w s0, r3
 
-    mov.w r12, (M/2)
+    mov.w r12, m_vec_limbs*8
     mul.w r3, r3, r12
 
-    .rept M/8
+    .rept (M+7)/8
     ldr.w word0, [r2], #4
     .set i, 0
     .rept 8
@@ -98,7 +99,7 @@
 
     1:
 
-    .rept M/8
+    .rept (M+7)/8
     ldr.w word1, [r2, r3]
     ldr.w word0, [r2], #4
 
@@ -193,7 +194,7 @@
 
     1:
 
-    .rept M/8
+    .rept (M+7)/8
     ldr.w word0, [r2], #4
     .set i, 0
     .rept 8
@@ -235,7 +236,8 @@
 
  // 64 17 17
 .macro multiply_P1_right_notbitsliced_m4f_asm nrows, ncols, cols
-// TODO: remove cases that are no longer need with the new params
+    .set m_vec_limbs, ((M + 15)/16)
+    // TODO: remove cases that are no longer need with the new params
     .if \cols != 8 && \cols != 18 && \cols != 17 && \cols != 10 && \cols != 9 && \cols != 4 && \cols != 11
     error
     .endif
@@ -276,13 +278,13 @@
     
 
 
-    mov.w r4, (M/2)*(\ncols-2)
+    mov.w r4, m_vec_limbs*8*(\ncols-2)
     vmov.w s1, r4
 
     1:
-    .rept M/8
+    .rept (M+7)/8
 
-    ldr.w word1, [r2, #M/2]
+    ldr.w word1, [r2, m_vec_limbs*8]
     ldr.w word0, [r2], #4
 
     .set i, 0
@@ -334,7 +336,7 @@
 
     vmov.w r10, s1
     add.w r2, r10
-    sub.w r10, M/2
+    sub.w r10, m_vec_limbs*8
     vmov.w s1, r10
 
     vmov.w r10, s0
@@ -344,9 +346,9 @@
 
     2:
 
-    add.w r2, M/2
+    add.w r2, m_vec_limbs*8
 
-    .rept M/8
+    .rept (M+7)/8
     ldr.w word0, [r2], #4
     .set i, 0
     .rept 8
@@ -708,10 +710,8 @@ multiply_P1_right_m4f_K_asm2_transposed:
    push.w {r4-r11}
     .set o_size, ((K+7)/8)
 
-    // TODO: switch to packed arguments
 
     .rept o_size-1
-
         ldrb.w r4,  [r1, V*0]
         ldrb.w r5,  [r1, V*1]
         ldrb.w r6,  [r1, V*2]

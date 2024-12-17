@@ -8,6 +8,7 @@
 #define MAYO_MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MAYO_MIN(x, y) (((x) < (y)) ? (x) : (y))
 
+// TODO: get rid of all m_legs
 // -----------------------------------------------------------------------------------------
 // NON-OPTIMIZED ARITHMETIC
 // -----------------------------------------------------------------------------------------
@@ -73,26 +74,22 @@ static void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const 
   const int v = dim0;
   const int o = dim1;
   const int m = M_MAX;
+  const int mp = 16*((M_MAX+15)/16);
   const int o_size = (o+7)/8;
 
-  // TODO: remove
-  
 
-  // TODO: Two problems
-  // (1) we are storing the m values padded to the next multiple of 16, so that it occupies full 
-  // uint64_ts -- this is not a problem for MAYO2 as it's 64 anyway
   for (int row = 0; row < v; row++)
   {
     for(int col = 0; col< o; col+=2){
       for(int k=0; k < m ; k += 8){
-        unsigned char byte0 = P2[(row * m + k)*o_size + (col/8)] >> (4*(col % 8));
-        unsigned char byte1 = P2[(row * m + k + 1)*o_size + (col/8)] >> (4*(col % 8));
-        unsigned char byte2 = P2[(row * m + k + 2)*o_size + (col/8)] >> (4*(col % 8));
-        unsigned char byte3 = P2[(row * m + k + 3)*o_size + (col/8)] >> (4*(col % 8));
-        unsigned char byte4 = P2[(row * m + k + 4)*o_size + (col/8)] >> (4*(col % 8));
-        unsigned char byte5 = P2[(row * m + k + 5)*o_size + (col/8)] >> (4*(col % 8));
-        unsigned char byte6 = P2[(row * m + k + 6)*o_size + (col/8)] >> (4*(col % 8));
-        unsigned char byte7 = P2[(row * m + k + 7)*o_size + (col/8)] >> (4*(col % 8));
+        unsigned char byte0 = P2[(row * mp + k)*o_size + (col/8)] >> (4*(col % 8));
+        unsigned char byte1 = P2[(row * mp + k + 1)*o_size + (col/8)] >> (4*(col % 8));
+        unsigned char byte2 = P2[(row * mp + k + 2)*o_size + (col/8)] >> (4*(col % 8));
+        unsigned char byte3 = P2[(row * mp + k + 3)*o_size + (col/8)] >> (4*(col % 8));
+        unsigned char byte4 = P2[(row * mp + k + 4)*o_size + (col/8)] >> (4*(col % 8));
+        unsigned char byte5 = P2[(row * mp + k + 5)*o_size + (col/8)] >> (4*(col % 8));
+        unsigned char byte6 = P2[(row * mp + k + 6)*o_size + (col/8)] >> (4*(col % 8));
+        unsigned char byte7 = P2[(row * mp + k + 7)*o_size + (col/8)] >> (4*(col % 8));
 
         uint32_t out0 = (byte0 & 0xF) |
                         ((byte1 & 0xF) << (1*4) ) |
@@ -114,11 +111,11 @@ static void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const 
 
         out[0]   ^= out0;
         if(col+1 < o)
-          out[m/8] ^= out1;
+          out[2*((m+15)/16)] ^= out1;
         out += 1;
       }
       if(col+1 < o)
-        out += m/8;
+        out += 2*((m+15)/16);
     }
   }
 }
@@ -129,8 +126,8 @@ static void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const 
 
 static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O, const int v, const int o, const int m){
     const int o_size = (o+7)/8;
-    const int m_legs = m/32;
-    const int m_bytes = m/2;
+    const int m_vec_limbs = (m + 15)/ 16;
+    const int m_legs = (m + 7) / 8;
 
     uint32_t table[o_size*256];
 
@@ -149,37 +146,36 @@ static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t
 
         // do pairs of field elements (P1t)
         if(col >= 0){
-            multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(&P1_O[((col)*m_legs*32) * o_size], table, P1t_ptr + (m_bytes/8) * (col), v-col-1);
+            multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(&P1_O[((col)*m_legs*8) * o_size], table, P1t_ptr + m_vec_limbs * (col), v-col-1);
         } else {
             multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm(P1_O, table, P1);
         }
 
 
         if(col >= 0)
-            P1t_ptr += (m_bytes/8)*(v-col-1);
-        P1t_ptr += (m_bytes/8)*(v-(col+1)-1);
+            P1t_ptr += m_vec_limbs*(v-col-1);
+        P1t_ptr += m_vec_limbs*(v-(col+1)-1);
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P1_O, table, P1 + (m_bytes/8) * col, col+1);
+        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P1_O, table, P1 + m_vec_limbs * col, col+1);
     }
 }
 
 void P1P1t_times_O_generic(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc) {
     (void)p;
-    uint32_t P1_O[(O_MAX + 7)/8 * M_MAX * V_MAX] = {0};
+    uint32_t P1_O[(O_MAX + 7)/8 *  (8*((M_MAX+7)/8)) * V_MAX] = {0};
     multiply_P1P1t_right_notbitsliced_m4f(P1_O, P1, O, V_MAX, O_MAX, M_MAX);
     repack_add((uint32_t *)acc, P1_O, V_MAX, O_MAX);
 }
 
+static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O, const int v, const int k, const int m){
+    const int k_size = (k+7)/8;
+    const int m_vec_limbs = (m + 15)/ 16;
 
-static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O, const int v, const int o, const int m){
-    const int o_size = (o+7)/8;
-    const int m_bytes = m / 2;
-
-    uint32_t table[o_size*256];
+    uint32_t table[k_size*256];
     // TODO: v is now always divisible by 2, we can simplify
     for (int col = -(v%2); col < v; col += 2 ){
 
-        for (int i = 0; i < o_size; i++)
+        for (int i = 0; i < k_size; i++)
         {
             table[i] = 0;
         }
@@ -187,15 +183,14 @@ static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const 
         // build table.
         multiply_P1_right_m4f_K_asm2_transposed(table, O + col, col);
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_K_asm(P1_O, table, P1 + (m_bytes/8) * col, col+1);
+        multiply_P1_right_notbitsliced_m4f_V_V_K_asm(P1_O, table, P1 + m_vec_limbs * col, col+1);
     }
 
 }
-
 void P1_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char* V, uint64_t* acc){
     (void)p;
-
-    uint32_t P1_Vt[(K_MAX + 7)/8 * M_MAX * V_MAX] = {0};
+    // TODO: try to eliminate requiring M_MAX+7
+    uint32_t P1_Vt[(K_MAX + 7)/8 * (8*((M_MAX+7)/8)) * V_MAX] = {0};
 
     multiply_P1_right_transposed_notbitsliced_m4f((uint32_t *)P1_Vt, P1, V, V_MAX, K_MAX, M_MAX);
 
@@ -204,7 +199,7 @@ void P1_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char
 
 static void multiply_P1_right_notbitsliced_m4f(uint32_t *P2, const uint64_t *P1, const unsigned char *O, const int v, const int o, const int m){
     const int o_size = (o+7)/8;
-    const int m_bytes = m / 2;
+    const int m_vec_limbs = (m + 15)/ 16;
 
     uint32_t table[o_size*256];
 
@@ -219,14 +214,15 @@ static void multiply_P1_right_notbitsliced_m4f(uint32_t *P2, const uint64_t *P1,
         multiply_P1_right_m4f_O_asm2(table, O + col*o, col);
 
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P2, table, P1 + (m_bytes/8) * col, col+1);
+        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P2, table, P1 + m_vec_limbs * col, col+1);
 
     }
 }
 
 void P1_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc){
     (void)p;
-    uint32_t P1_O[(O_MAX + 7)/8 * M_MAX * V_MAX] = {0};
+    // TODO: try to eliminate requiring M_MAX+7
+    uint32_t P1_O[(O_MAX + 7)/8 * (8*((M_MAX+7)/8)) * V_MAX] = {0};
     multiply_P1_right_notbitsliced_m4f(P1_O, P1, O, V_MAX, O_MAX, M_MAX);
     repack_add((uint32_t *)acc, P1_O, V_MAX, O_MAX);
 }

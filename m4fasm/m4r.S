@@ -234,7 +234,6 @@
 
 .endm
 
- // 64 17 17
 .macro multiply_P1_right_notbitsliced_m4f_asm nrows, ncols, cols
     .set m_vec_limbs, ((M + 15)/16)
     // TODO: remove cases that are no longer need with the new params
@@ -274,9 +273,6 @@
     beq.w 2f
 
     vmov.w s0, r3
-
-    
-
 
     mov.w r4, m_vec_limbs*8*(\ncols-2)
     vmov.w s1, r4
@@ -414,129 +410,130 @@
     .unreq aaa2
 
 .endm
+// TODO: remove outdated
+@ .macro multiply_P1_right_m4f_asm nrows, ncols, cols
+@     // TODO: can generalize this; it should work for 1,2,3 limbs which is all we need
+@     .if \cols != 8 && \cols != 10 && \cols != 18 && \cols != 9 && \cols != 4 && \cols != 11 && \cols != 17
+@         ERROR: cols not supported
+@     .endif
 
-.macro multiply_P1_right_m4f_asm nrows, ncols, cols
-    // TODO: can generalize this; it should work for 1,2,3 limbs which is all we need
-    .if \cols != 8 && \cols != 10 && \cols != 18 && \cols != 9 && \cols != 4 && \cols != 11
-        //ERROR: cols not supported
-        //TODO: fix
-    .endif
+@     .if \cols == 10 || \cols == 9 || \cols == 11
+@     push.w {r4-r11,r14}
+@     aaa2 .req r14
+@     .elseif \cols == 18
+@     push.w {r4-r11,r14}
+@     aaa2 .req r7
+@     .else
+@     push.w {r4-r9}
+@     aaa2 .req r7
+@     .endif
 
-    .if \cols == 10 || \cols == 9 || \cols == 11
-    push.w {r4-r11,r14}
-    aaa2 .req r14
-    .elseif \cols == 18
-    push.w {r4-r11,r14}
-    aaa2 .req r7
-    .else
-    push.w {r4-r9}
-    aaa2 .req r7
-    .endif
+@     aaa0 .req r4
+@     aaa1 .req r5
+@     idx0 .req r6
+@     idx1 .req r7
+@     bbb0 .req r8
+@     bbb1 .req r9
+@     bbb2 .req r12
 
-    aaa0 .req r4
-    aaa1 .req r5
-    idx0 .req r6
-    idx1 .req r7
-    bbb0 .req r8
-    bbb1 .req r9
-    bbb2 .req r12
+@     aaa3 .req r10
+@     bbb3 .req r11
 
-    aaa3 .req r10
-    bbb3 .req r11
+@     .if \cols == 18
+@     mov.w r14, #12
+@     .endif
 
-    .if \cols == 18
-    mov.w r14, #12
-    .endif
+@     1:
+@     .if \cols == 8 || \cols == 4
+@         .rept M/2
+@             ldrb.w idx1, [r2, #1]
+@             ldrb.w idx0, [r2], #2
+@             ldr.w aaa0, [r0]
+@             ldr.w aaa1, [r0, #4]
+@             ldr.w bbb0, [r1, idx0, lsl#2]
+@             ldr.w bbb1, [r1, idx1, lsl#2]
+@             eor.w aaa0, bbb0
+@             eor.w aaa1, bbb1
+@             str.w aaa0, [r0], #4
+@             str.w aaa1, [r0], #4
+@         .endr
+@     .endif
 
-    1:
-    .if \cols == 8 || \cols == 4
-        .rept M/2
-            ldrb.w idx1, [r2, #1]
-            ldrb.w idx0, [r2], #2
-            ldr.w aaa0, [r0]
-            ldr.w aaa1, [r0, #4]
-            ldr.w bbb0, [r1, idx0, lsl#2]
-            ldr.w bbb1, [r1, idx1, lsl#2]
-            eor.w aaa0, bbb0
-            eor.w aaa1, bbb1
-            str.w aaa0, [r0], #4
-            str.w aaa1, [r0], #4
-        .endr
-    .endif
+@     .if \cols == 10 || \cols == 9 || \cols == 11
+@         .rept M/2
+@         ldrb.w idx1, [r2, #1]
+@         ldrb.w idx0, [r2], #2
+@         add.w idx0, r1, idx0, lsl#3
+@         add.w idx1, r1, idx1, lsl#3
+@         ldr.w aaa0, [r0]
+@         ldr.w aaa1, [r0, #4]
+@         ldr.w aaa2, [r0, #8]
+@         ldr.w aaa3, [r0, #12]
+@         ldr.w bbb0, [idx0]
+@         ldr.w bbb1, [idx0, #4]
+@         ldr.w bbb2, [idx1]
+@         ldr.w bbb3, [idx1, #4]
+@         eor.w aaa0, bbb0
+@         eor.w aaa1, bbb1
+@         eor.w aaa2, bbb2
+@         eor.w aaa3, bbb3
+@         str.w aaa0, [r0], #4
+@         str.w aaa1, [r0], #4
+@         str.w aaa2, [r0], #4
+@         str.w aaa3, [r0], #4
+@         .endr
+@     .endif
 
-    .if \cols == 10 || \cols == 9 || \cols == 11
-        .rept M/2
-        ldrb.w idx1, [r2, #1]
-        ldrb.w idx0, [r2], #2
-        add.w idx0, r1, idx0, lsl#3
-        add.w idx1, r1, idx1, lsl#3
-        ldr.w aaa0, [r0]
-        ldr.w aaa1, [r0, #4]
-        ldr.w aaa2, [r0, #8]
-        ldr.w aaa3, [r0, #12]
-        ldr.w bbb0, [idx0]
-        ldr.w bbb1, [idx0, #4]
-        ldr.w bbb2, [idx1]
-        ldr.w bbb3, [idx1, #4]
-        eor.w aaa0, bbb0
-        eor.w aaa1, bbb1
-        eor.w aaa2, bbb2
-        eor.w aaa3, bbb3
-        str.w aaa0, [r0], #4
-        str.w aaa1, [r0], #4
-        str.w aaa2, [r0], #4
-        str.w aaa3, [r0], #4
-        .endr
-    .endif
+@     .if \cols == 18
+@         .rept M
+@             ldrb.w idx0, [r2], #1
+@             mla.w idx0, idx0, r14, r1
+@             ldr.w aaa0, [r0]
+@             ldr.w aaa1, [r0, #4]
+@             ldr.w aaa2, [r0, #8]
+@             ldr.w bbb0, [idx0]
+@             ldr.w bbb1, [idx0, #4]
+@             ldr.w bbb2, [idx0, #8]
+@             eor.w aaa0, bbb0
+@             eor.w aaa1, bbb1
+@             eor.w aaa2, bbb2
+@             str.w aaa0, [r0], #4
+@             str.w aaa1, [r0], #4
+@             str.w aaa2, [r0], #4
+@         .endr
+@     .endif
 
-    .if \cols == 18
-        .rept M
-            ldrb.w idx0, [r2], #1
-            mla.w idx0, idx0, r14, r1
-            ldr.w aaa0, [r0]
-            ldr.w aaa1, [r0, #4]
-            ldr.w aaa2, [r0, #8]
-            ldr.w bbb0, [idx0]
-            ldr.w bbb1, [idx0, #4]
-            ldr.w bbb2, [idx0, #8]
-            eor.w aaa0, bbb0
-            eor.w aaa1, bbb1
-            eor.w aaa2, bbb2
-            str.w aaa0, [r0], #4
-            str.w aaa1, [r0], #4
-            str.w aaa2, [r0], #4
-        .endr
-    .endif
+@     subs.w r3, r3, #1
+@     bne.w 1b
 
-    subs.w r3, r3, #1
-    bne.w 1b
+@     .if \cols == 10 || \cols == 18 || \cols == 9 || \cols == 11
+@     pop.w {r4-r11, pc}
+@     .else
+@     pop.w {r4-r9}
+@     bx lr
+@     .endif
 
-    .if \cols == 10 || \cols == 18 || \cols == 9 || \cols == 11
-    pop.w {r4-r11, pc}
-    .else
-    pop.w {r4-r9}
-    bx lr
-    .endif
-
-    .unreq aaa2
-    .unreq aaa0
-    .unreq aaa1
-    .unreq idx0
-    .unreq idx1
-    .unreq bbb0
-    .unreq bbb1
-    .unreq bbb2
-    .unreq aaa3
-    .unreq bbb3
+@     .unreq aaa2
+@     .unreq aaa0
+@     .unreq aaa1
+@     .unreq idx0
+@     .unreq idx1
+@     .unreq bbb0
+@     .unreq bbb1
+@     .unreq bbb2
+@     .unreq aaa3
+@     .unreq bbb3
 
 
-.endm
 
-.global multiply_P1_right_m4f_V_V_O_asm
-.type multiply_P1_right_m4f_V_V_O_asm, %function
-.align 2
-multiply_P1_right_m4f_V_V_O_asm:
-    multiply_P1_right_m4f_asm V, V, O
+@ .endm
+
+// TODO: remove outdated
+@ .global multiply_P1_right_m4f_V_V_O_asm
+@ .type multiply_P1_right_m4f_V_V_O_asm, %function
+@ .align 2
+@ multiply_P1_right_m4f_V_V_O_asm:
+@     multiply_P1_right_m4f_asm V, V, O
 
 
 .global multiply_P1_right_notbitsliced_m4f_V_V_O_asm
@@ -545,11 +542,11 @@ multiply_P1_right_m4f_V_V_O_asm:
 multiply_P1_right_notbitsliced_m4f_V_V_O_asm:
     multiply_P1_right_notbitsliced_m4f_asm V, V, O
 
-.global multiply_P1_right_m4f_V_V_K_asm
-.type multiply_P1_right_m4f_V_V_K_asm, %function
-.align 2
-multiply_P1_right_m4f_V_V_K_asm:
-    multiply_P1_right_m4f_asm V, V, K
+@ .global multiply_P1_right_m4f_V_V_K_asm
+@ .type multiply_P1_right_m4f_V_V_K_asm, %function
+@ .align 2
+@ multiply_P1_right_m4f_V_V_K_asm:
+@     multiply_P1_right_m4f_asm V, V, K
 
 .global multiply_P1_right_notbitsliced_m4f_V_V_K_asm
 .type multiply_P1_right_notbitsliced_m4f_V_V_K_asm, %function
@@ -790,10 +787,9 @@ multiply_P1_right_m4f_K_asm2_transposed:
 
     .endr
 
-
-    .if K != 9 && K != 4 && K != 11
-    error
-        // TODO: needs fixing
+    // TODO, we can remove the 9 case
+    .if K != 9 && K != 4 && K != 11 && K != 10
+        error
     .endif
 
 
@@ -900,6 +896,59 @@ multiply_P1_right_m4f_K_asm2_transposed:
     .endr
     .endif
 
+
+    .if K == 10
+    // last elements
+    ldrb.w r4, [r1]
+    ldrb.w r5, [r1, 1*V]
+
+    eor.w r4, r4, r5, lsl 1*4
+
+
+    .set t, 0
+    .rept 4
+        .if t > 0
+        mulx r4, r5
+        .endif
+        .rept (1<<t)
+            ldr.w r5, [r0], #4*o_size
+            eor.w r5, r4
+            str.w r5, [r0, (1<<t)*4*o_size - 4*o_size]
+        .endr
+        sub.w r0, (1<<t)*4*o_size
+        .set t,t+1
+    .endr
+
+    ldrb.w r4, [r1, #1]
+    ldrb.w r5, [r1, V+1]
+
+    eor.w r4, r4, r5, lsl 1*4
+    .set t, 4
+    .rept 4
+        .if t > 4
+        mulx r4, r5
+        .endif
+        .rept (1<<t)/4
+            ldr.w r6, [r0,#1*4*o_size]
+            ldr.w r7, [r0,#2*4*o_size]
+            ldr.w r12, [r0,#3*4*o_size]
+            ldr.w r5, [r0], #4*4*o_size
+            eor.w r5, r4
+            eor.w r6, r4
+            eor.w r7, r4
+            eor.w r12, r4
+            str.w r5, [r0, (1<<t)*4*o_size - 4*4*o_size]
+            str.w r6, [r0, (1<<t)*4*o_size - 3*4*o_size]
+            str.w r7, [r0, (1<<t)*4*o_size - 2*4*o_size]
+            str.w r12, [r0, (1<<t)*4*o_size - 1*4*o_size]
+        .endr
+
+        sub.w r0, (1<<t)*4*o_size
+        .set t,t+1
+    .endr
+    .endif
+
+    // TODO: remove the ones we do not need    
     .if K == 11
     // last elements
     ldrb.w r4, [r1]

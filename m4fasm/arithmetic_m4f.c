@@ -120,10 +120,6 @@ static void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const 
   }
 }
 
-
-// TODO: optimize
-
-
 static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O, const int v, const int o, const int m){
     const int o_size = (o+7)/8;
     const int m_vec_limbs = (m + 15)/ 16;
@@ -185,8 +181,8 @@ static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const 
         // do pairs of field elements (P1)
         multiply_P1_right_notbitsliced_m4f_V_V_K_asm(P1_O, table, P1 + m_vec_limbs * col, col+1);
     }
-
 }
+
 void P1_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char* V, uint64_t* acc){
     (void)p;
     // TODO: try to eliminate requiring M_MAX+7

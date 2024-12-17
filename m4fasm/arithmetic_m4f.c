@@ -68,14 +68,19 @@ void mul_add_mat_x_m_mat(int m_vec_limbs, const unsigned char *mat, const uint64
   }
 }
 
-// TODO: optimize
-/*
+
 static void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const int dim1){
   const int v = dim0;
   const int o = dim1;
   const int m = M_MAX;
   const int o_size = (o+7)/8;
 
+  // TODO: remove
+  
+
+  // TODO: Two problems
+  // (1) we are storing the m values padded to the next multiple of 16, so that it occupies full 
+  // uint64_ts -- this is not a problem for MAYO2 as it's 64 anyway
   for (int row = 0; row < v; row++)
   {
     for(int col = 0; col< o; col+=2){
@@ -119,16 +124,17 @@ static void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const 
 }
 
 
+// TODO: optimize
 
 
-static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint32_t *P1, const unsigned char *O, const int v, const int o, const int m){
+static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O, const int v, const int o, const int m){
     const int o_size = (o+7)/8;
     const int m_legs = m/32;
     const int m_bytes = m/2;
 
     uint32_t table[o_size*256];
 
-    const uint32_t *P1t_ptr = P1;
+    const uint64_t *P1t_ptr = P1;
     for (int col = -(v%2); col < v; col += 2 ){
 
         for (int i = 0; i < o_size; i++)
@@ -137,48 +143,40 @@ static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint32_t
         }
 
         // build table.
-        multiply_P1_right_m4f_O_asm2(table, O + (col*o/2), col);
+        multiply_P1_right_m4f_O_asm2(table, O + col*o, col);
 
 
 
         // do pairs of field elements (P1t)
         if(col >= 0){
-            multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(&P1_O[((col)*m_legs*32) * o_size], table, P1t_ptr + (m_bytes/4) * (col), v-col-1);
+            multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(&P1_O[((col)*m_legs*32) * o_size], table, P1t_ptr + (m_bytes/8) * (col), v-col-1);
         } else {
             multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm(P1_O, table, P1);
         }
 
 
         if(col >= 0)
-            P1t_ptr += (m_bytes/4)*(v-col-1);
-        P1t_ptr += (m_bytes/4)*(v-(col+1)-1);
+            P1t_ptr += (m_bytes/8)*(v-col-1);
+        P1t_ptr += (m_bytes/8)*(v-(col+1)-1);
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P1_O, table, P1 + (m_bytes/4) * col, col+1);
+        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P1_O, table, P1 + (m_bytes/8) * col, col+1);
     }
 }
 
-void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc) {
+void P1P1t_times_O_generic(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc) {
     (void)p;
     uint32_t P1_O[(O_MAX + 7)/8 * M_MAX * V_MAX] = {0};
-
-    // TODO: do packing outside of this function (should be able to just change the representation)
-    unsigned char O_packed[V_MAX*O_MAX/2];
-    for(unsigned int i=0; i < sizeof O_packed; i++){
-        O_packed[i] = O[2*i] ^ (O[2*i+1] << 4);
-    }
-
-    multiply_P1P1t_right_notbitsliced_m4f(P1_O, (uint32_t *)P1, O_packed, V_MAX, O_MAX, M_MAX);
+    multiply_P1P1t_right_notbitsliced_m4f(P1_O, P1, O, V_MAX, O_MAX, M_MAX);
     repack_add((uint32_t *)acc, P1_O, V_MAX, O_MAX);
 }
-*/
 
-// TODO: optimize
-/*
-static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const uint32_t *P1, const unsigned char *O, const int v, const int o, const int m){
+
+static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O, const int v, const int o, const int m){
     const int o_size = (o+7)/8;
     const int m_bytes = m / 2;
 
     uint32_t table[o_size*256];
+    // TODO: v is now always divisible by 2, we can simplify
     for (int col = -(v%2); col < v; col += 2 ){
 
         for (int i = 0; i < o_size; i++)
@@ -189,31 +187,28 @@ static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const 
         // build table.
         multiply_P1_right_m4f_K_asm2_transposed(table, O + col, col);
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_K_asm(P1_O, table, P1 + (m_bytes/4) * col, col+1);
+        multiply_P1_right_notbitsliced_m4f_V_V_K_asm(P1_O, table, P1 + (m_bytes/8) * col, col+1);
     }
 
 }
 
-
-void P1_times_Vt(const mayo_params_t* p, const uint32_t* P1, const unsigned char* V, uint32_t* acc){
+void P1_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char* V, uint64_t* acc){
     (void)p;
 
     uint32_t P1_Vt[(K_MAX + 7)/8 * M_MAX * V_MAX] = {0};
 
-    multiply_P1_right_transposed_notbitsliced_m4f(P1_Vt, P1, V, V_MAX, K_MAX, M_MAX);
+    multiply_P1_right_transposed_notbitsliced_m4f((uint32_t *)P1_Vt, P1, V, V_MAX, K_MAX, M_MAX);
 
-    repack_add(acc, P1_Vt, V_MAX, K_MAX);
+    repack_add((uint32_t *)acc, P1_Vt, V_MAX, K_MAX);
 }
-*/
 
-// TODO: optimize
-/*
-static void multiply_P1_right_notbitsliced_m4f(uint32_t *P2, const uint32_t *P1, const unsigned char *O, const int v, const int o, const int m){
+static void multiply_P1_right_notbitsliced_m4f(uint32_t *P2, const uint64_t *P1, const unsigned char *O, const int v, const int o, const int m){
     const int o_size = (o+7)/8;
     const int m_bytes = m / 2;
 
     uint32_t table[o_size*256];
 
+    // TODO: v is now always divisible by 2, we can simplify
     for (int col = -(v%2); col < v; col += 2 ){
 
         for (int i = 0; i < o_size; i++)
@@ -221,29 +216,20 @@ static void multiply_P1_right_notbitsliced_m4f(uint32_t *P2, const uint32_t *P1,
             table[i] = 0;
         }
         // build table.
-        multiply_P1_right_m4f_O_asm2(table, O + (col*o/2), col);
+        multiply_P1_right_m4f_O_asm2(table, O + col*o, col);
 
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P2, table, P1 + (m_bytes/4) * col, col+1);
+        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P2, table, P1 + (m_bytes/8) * col, col+1);
 
     }
 }
 
-void P1_times_O(const mayo_params_t* p, const uint32_t* P1, const unsigned char* O, uint32_t* acc){
+void P1_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc){
     (void)p;
     uint32_t P1_O[(O_MAX + 7)/8 * M_MAX * V_MAX] = {0};
-
-    // TODO: do packing outside of this function (should be able to just change the representation)
-    unsigned char O_packed[V_MAX*O_MAX/2];
-    for(unsigned int i=0; i < sizeof O_packed; i++){
-        O_packed[i] = O[2*i] ^ (O[2*i+1] << 4);
-    }
-
-    multiply_P1_right_notbitsliced_m4f(P1_O, P1, O_packed, V_MAX, O_MAX, M_MAX);
-    repack_add(acc, P1_O, V_MAX, O_MAX);
-
+    multiply_P1_right_notbitsliced_m4f(P1_O, P1, O, V_MAX, O_MAX, M_MAX);
+    repack_add((uint32_t *)acc, P1_O, V_MAX, O_MAX);
 }
-*/
 
 // put matrix in row echelon form with ones on first nonzero entries *in
 // constant time*

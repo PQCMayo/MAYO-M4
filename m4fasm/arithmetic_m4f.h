@@ -7,12 +7,12 @@
 // M4R
 // TODO: remove all the _notbitsliced_ from the names
 void multiply_P1_right_m4f_O_asm2(uint32_t *table, const unsigned char *O, int col);
-void multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(uint32_t *acc, const uint32_t *table, const uint32_t *P1, int rows);
-void multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm(uint32_t *acc, const uint32_t *table, const uint32_t *P1);
-void multiply_P1_right_notbitsliced_m4f_V_V_O_asm(uint32_t *acc, const uint32_t *table, const uint32_t *P1, int rows);
+void multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(uint32_t *acc, const uint32_t *table, const uint64_t *P1, int rows);
+void multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm(uint32_t *acc, const uint32_t *table, const uint64_t *P1);
+void multiply_P1_right_notbitsliced_m4f_V_V_O_asm(uint32_t *acc, const uint32_t *table, const uint64_t *P1, int rows);
 
 void multiply_P1_right_m4f_K_asm2_transposed(uint32_t *table, const unsigned char *O, int col);
-void multiply_P1_right_notbitsliced_m4f_V_V_K_asm(uint32_t *acc, const uint32_t *table, const uint32_t *P1, int rows);
+void multiply_P1_right_notbitsliced_m4f_V_V_K_asm(uint32_t *acc, const uint32_t *table, const uint64_t *P1, int rows);
 
 
 // EF

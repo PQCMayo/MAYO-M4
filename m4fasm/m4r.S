@@ -8,8 +8,9 @@
 
 
 .macro multiply_P1t_right_notbitsliced_m4f_asm nrows, ncols, cols
-    .if \cols != 8 && \cols != 18 && \cols != 10
-    ///error
+    // TODO: remove the ones we don't need
+    .if \cols != 8 && \cols != 18 && \cols != 17 && \cols != 10
+    error
     // TODO: fix
     .endif
     word0 .req r10
@@ -28,7 +29,7 @@
     .if \cols == 10 || \cols == 9 || \cols == 11
     push.w {r4-r11,r14}
     aaa2 .req r14
-    .elseif \cols == 18
+    .elseif \cols == 18 || \cols == 17
     push.w {r4-r11,r14}
     aaa2 .req r7
     .else
@@ -36,7 +37,7 @@
     aaa2 .req r7
     .endif
 
-    .if \cols == 18
+    .if \cols == 18 || \cols == 17
     mov.w r14, #12
     .endif
 
@@ -58,7 +59,7 @@
     str.w aaa0, [r0], #4
     .endif
 
-    .if \cols == 18
+    .if \cols == 18 || \cols ==17
     mla.w idx0, idx0, r14, r1
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -115,7 +116,7 @@
     str.w aaa0, [r0], #4
     .endif
 
-    .if \cols == 18
+    .if \cols == 18 || \cols == 17
     mla.w idx0, idx0, r14, r1
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -154,7 +155,7 @@
 
     2:
 
-    .if \cols == 10 || \cols == 18 || \cols == 9 || \cols == 11
+    .if \cols == 10 || \cols == 18 || \cols == 17 || \cols == 9 || \cols == 11
     pop.w {r4-r11, pc}
     .else
     pop.w {r4-r11}
@@ -232,10 +233,11 @@
 
 .endm
 
+ // 64 17 17
 .macro multiply_P1_right_notbitsliced_m4f_asm nrows, ncols, cols
-    .if \cols != 8 && \cols != 18 && \cols != 10 && \cols != 9 && \cols != 4 && \cols != 11
-    //error
-    // TODO: needs fixing
+// TODO: remove cases that are no longer need with the new params
+    .if \cols != 8 && \cols != 18 && \cols != 17 && \cols != 10 && \cols != 9 && \cols != 4 && \cols != 11
+    error
     .endif
     word0 .req r3
     word1 .req r10
@@ -249,11 +251,11 @@
     bbb0 .req r8
     bbb1 .req r9
     bbb2 .req r12
-
+    // TODO: remove cases that are no longer need with the new params
     .if \cols == 10 || \cols == 9 || \cols == 11
     push.w {r4-r11,r14}
     aaa2 .req r14
-    .elseif \cols == 18
+    .elseif \cols == 18 || \cols == 17
     push.w {r4-r11,r14}
     aaa2 .req r7
     .else
@@ -261,9 +263,10 @@
     aaa2 .req r7
     .endif
 
-    .if \cols == 18
+    .if \cols == 18 || \cols == 17
     mov.w r14, #12
     .endif
+
 
     cmp.w r3, #0
     beq.w 2f
@@ -296,8 +299,10 @@
     str.w aaa0, [r0], #4
     .endif
 
-    .if \cols == 18
+    .if \cols == 18 || \cols == 17
     mla.w idx0, idx0, r14, r1
+
+    // TODO: why do we accumulate here instead of just doing a str; accumulation is done separately anyway
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
     ldr.w aaa2, [r0, #8]
@@ -355,7 +360,7 @@
     str.w aaa0, [r0], #4
     .endif
 
-    .if \cols == 18
+    .if \cols == 18 || \cols == 17
     mla.w idx0, idx0, r14, r1
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -388,7 +393,7 @@
 
 
 
-    .if \cols == 10 || \cols == 18 || \cols == 9 || \cols == 11
+    .if \cols == 10 || \cols == 18 || \cols == 17 ||  \cols == 9 || \cols == 11
     pop.w {r4-r11, pc}
     .else
     pop.w {r4-r10}
@@ -594,6 +599,7 @@ multiply_P1_right_m4f_O_asm2:
     push.w {r4-r7}
     .set o_size, ((O+7)/8)
 
+    // TODO: this is no longer needed because V is always a multiple of two
     .if (V%2) != 0
     cmp.w r2, #0
     .endif
@@ -601,11 +607,32 @@ multiply_P1_right_m4f_O_asm2:
     .rept o_size
         .set t, 0
 
+        
         .if (V%2) != 0
         blt.w 1f
         .endif
 
-        ldr.w r4, [r1]
+        // contains only 4 elements need to pack it 
+        // TODO: optimize this: only load the number of elements we need
+        ldr.w r5, [r1]
+        ldr.w r6, [r1, #4]
+        and.w r4, r5, #0xF
+        ubfx.w r7, r5, #8, #4
+        eor.w r4, r4, r7, lsl#4
+        ubfx.w r7, r5, #16, #4
+        eor.w r4, r4, r7, lsl#8
+        ubfx.w r7, r5, #24, #4
+        eor.w r4, r4, r7, lsl#12
+        and.w r7, r6, #0xF
+        eor.w r4, r4, r7, lsl#16
+        ubfx.w r7, r6, #8, #4
+        eor.w r4, r4, r7, lsl#20
+        ubfx.w r7, r6, #16, #4
+        eor.w r4, r4, r7, lsl#24
+        ubfx.w r7, r6, #24, #4
+        eor.w r4, r4, r7, lsl#28
+
+
         .rept 4
             .if t > 0
             mulx r4, r5
@@ -624,7 +651,25 @@ multiply_P1_right_m4f_O_asm2:
 
 
         .set t, 4
-        ldr.w r4, [r1, (O/2)]
+        // TODO: optimize this: only load the number of elements we need
+        ldr.w r5, [r1, O]
+        ldr.w r6, [r1, O+4]
+        and.w r4, r5, #0xF
+        ubfx.w r7, r5, #8, #4
+        eor.w r4, r4, r7, lsl#4
+        ubfx.w r7, r5, #16, #4
+        eor.w r4, r4, r7, lsl#8
+        ubfx.w r7, r5, #24, #4
+        eor.w r4, r4, r7, lsl#12
+        and.w r7, r6, #0xF
+        eor.w r4, r4, r7, lsl#16
+        ubfx.w r7, r6, #8, #4
+        eor.w r4, r4, r7, lsl#20
+        ubfx.w r7, r6, #16, #4
+        eor.w r4, r4, r7, lsl#24
+        ubfx.w r7, r6, #24, #4
+        eor.w r4, r4, r7, lsl#28
+
         .rept 4
             .if t > 4
             mulx r4, r5
@@ -648,7 +693,7 @@ multiply_P1_right_m4f_O_asm2:
             .set t,t+1
         .endr
 
-        add.w r1, #4
+        add.w r1, #8
         add.w r0, #4
     .endr
 
@@ -747,7 +792,7 @@ multiply_P1_right_m4f_K_asm2_transposed:
 
 
     .if K != 9 && K != 4 && K != 11
-    //error
+    error
         // TODO: needs fixing
     .endif
 
@@ -915,6 +960,7 @@ multiply_P1_right_m4f_K_asm2_transposed:
     bx lr
 
 
+// TODO: remove this?
 .global add_P2_m4f_asm
 .type add_P2_m4f_asm, %function
 .align 2

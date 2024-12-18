@@ -26,10 +26,10 @@ void m_upper(const mayo_params_t *p, const uint64_t *in, uint64_t *out, int size
     {
         for (int c = r; c < size; c++)
         {
-            m_vec_copy(in + m_vec_limbs * (r * size + c), out + m_vec_limbs * m_vecs_stored);
+            m_vec_copy(m_vec_limbs, in + m_vec_limbs * (r * size + c), out + m_vec_limbs * m_vecs_stored);
             if (r != c)
             {
-                m_vec_add(in + m_vec_limbs * (c * size + r), out + m_vec_limbs * m_vecs_stored);
+                m_vec_add(m_vec_limbs, in + m_vec_limbs * (c * size + r), out + m_vec_limbs * m_vecs_stored);
             }
             m_vecs_stored++;
         }
@@ -151,7 +151,7 @@ static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t
     }
 }
 
-void P1P1t_times_O_generic(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc) {
+void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc) {
     (void)p;
     uint32_t P1_O[(O_MAX + 7)/8 *  (8*((M_MAX+7)/8)) * V_MAX] = {0};
     multiply_P1P1t_right_notbitsliced_m4f(P1_O, P1, O, V_MAX, O_MAX, M_MAX);

@@ -586,7 +586,7 @@ ef_unbitslice_asm:
 
     gf16_bitslice tmp0, tmp2, tmp4, tmp6, tmp1, tmp3, tmp5, tmp7
 
-
+    // TODO: remove
     .if ncols % 32 == 9
     lsr.w tmp1, tmp0, #4
 
@@ -599,6 +599,7 @@ ef_unbitslice_asm:
     strb.w tmp2, [out, #4*2]
     .endif
 
+    // TODO: remove
     .if ncols % 32 == 15
     lsr.w tmp1, tmp0, #4
     lsr.w tmp3, tmp2, #4
@@ -621,6 +622,33 @@ ef_unbitslice_asm:
 
     .endif
 
+    .if ncols % 32 == 17
+    lsr.w tmp1, tmp0, #4
+    lsr.w tmp3, tmp2, #4
+
+    and.w tmp0, #0x0F0F0F0F
+    and.w tmp1, #0x0F0F0F0F
+    and.w tmp2, #0x0F0F0F0F
+    and.w tmp3, #0x0F0F0F0F
+    and.w tmp4, #0x0F0F0F0F
+
+    str.w tmp0, [out]
+    str.w tmp1, [out, #4*1]
+    str.w tmp2, [out, #4*2]
+    str.w tmp3, [out, #4*3]
+    strb.w tmp4, [out, #4*4]
+    .endif
+
+    .if ncols % 32 == 5
+    lsr.w tmp1, tmp0, #4
+
+
+    and.w tmp0, #0x0F0F0F0F
+    and.w tmp1, #0x0F0F0F0F
+
+    str.w tmp0, [out]
+    strb.w tmp1, [out, #4*1]
+    .endif
 
 
     pop.w {r4-r11, pc}
@@ -687,7 +715,6 @@ ef_unbitslice_asm:
 .align 2
 backsub_inner_asm:
     .set ncols, (K*O+1)
-    .set legs, ((ncols+31)/32)
 
     ctr .req s0
 

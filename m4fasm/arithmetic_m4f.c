@@ -8,8 +8,6 @@
 
 #define MAYO_MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MAYO_MIN(x, y) (((x) < (y)) ? (x) : (y))
-
-// TODO: get rid of all m_legs
 // -----------------------------------------------------------------------------------------
 // NON-OPTIMIZED ARITHMETIC
 // -----------------------------------------------------------------------------------------
@@ -117,8 +115,10 @@ static void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const 
 
 static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O, const int v, const int o, const int m){
     const int o_size = (o+7)/8;
-    const int m_vec_limbs = (m + 15)/ 16;
-    const int m_legs = (m + 7) / 8;
+    // input and outputs are padded to 64-bit limbs
+    // intermediate representation is 32-bit limbs
+    const int m_vec_limbs_64 = (m + 15)/ 16;
+    const int m_vec_limbs_32 = (m + 7) / 8;
 
     uint32_t table[o_size*256];
 
@@ -137,17 +137,17 @@ static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t
 
         // do pairs of field elements (P1t)
         if(col >= 0){
-            multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(&P1_O[((col)*m_legs*8) * o_size], table, P1t_ptr + m_vec_limbs * (col), v-col-1);
+            multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(&P1_O[((col)*m_vec_limbs_32*8) * o_size], table, P1t_ptr + m_vec_limbs_64 * (col), v-col-1);
         } else {
             multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm(P1_O, table, P1);
         }
 
 
         if(col >= 0)
-            P1t_ptr += m_vec_limbs*(v-col-1);
-        P1t_ptr += m_vec_limbs*(v-(col+1)-1);
+            P1t_ptr += m_vec_limbs_64*(v-col-1);
+        P1t_ptr += m_vec_limbs_64*(v-(col+1)-1);
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P1_O, table, P1 + m_vec_limbs * col, col+1);
+        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P1_O, table, P1 + m_vec_limbs_64 * col, col+1);
     }
 }
 
@@ -284,41 +284,6 @@ void m_calculate_SPS(const uint64_t *PS, const unsigned char *S, int _m, int _k,
     // multiply stuff according to the bins of the accumulator and add to PS.
     multiply_bins_asm(SPS, accumulator, k*k);
 }
-
-// TODO: optimize
-/*
-void V_times_L__V_times_P1_times_Vt(const mayo_params_t* p, const uint64_t* L, const unsigned char* V, uint64_t* M, const uint64_t* P1, uint64_t* Y) {
-        alignas (32) uint32_t Pv[N_MINUS_O_MAX * K_MAX * M_MAX / 8] = {0};
-        const int param_k = K_MAX;
-        const int param_m = M_MAX;
-        const int param_n = N_MAX;
-        const int param_o = O_MAX;
-
-
-        mul_add_mat_x_m_mat(param_m / 32, V, (uint32_t *)L, (uint32_t *)M,
-                                      param_k, param_n - param_o, param_o);
-        // compute all the v_i^t * P^(1) * v_j
-
-        P1_times_Vt(p, (uint32_t *)P1, V, Pv);
-        mul_add_mat_x_m_mat(param_m / 32, V, Pv,
-                                      (uint32_t *) Y, param_k, param_n - param_o,
-                                      param_k);
-}
-*/
-
-// TODO: optimize
-/*
-void Ot_times_P1O_P2(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* P1O_P2, uint64_t* P3){
-    const int param_m = M_MAX;
-    const int m_legs = param_m / 32;
-    const int param_v = V_MAX;
-    const int param_o = O_MAX;
-    P1_times_O(p, (uint32_t *) P1, O, (uint32_t *) P1O_P2);
-
-    // compute P3 = O^t * (P1*O + P2)
-    mul_add_mat_trans_x_m_mat(m_legs, O, P1O_P2, P3, param_v, param_o, param_o);
-}
-*/
 
 // put matrix in row echelon form with ones on first nonzero entries *in
 // constant time*

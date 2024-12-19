@@ -7,7 +7,7 @@
 
 
 
-.macro multiply_P1t_right_notbitsliced_m4f_asm nrows, ncols, cols
+.macro multiply_P1t_right_m4f_asm nrows, ncols, cols
     .set m_vec_limbs, ((M + 15)/16)
     // TODO: remove the ones we don't need
     .if \cols != 8 && \cols != 18 && \cols != 17 && \cols != 10
@@ -177,7 +177,7 @@
 .endm
 
 
-.macro multiply_P1t_right_notbitsliced_m4f_first_asm nrows, ncols, cols
+.macro multiply_P1t_right_m4f_first_asm nrows, ncols, cols
     word0 .req r3
     .set col_size, ((\cols+7)/8)
 
@@ -234,7 +234,7 @@
 
 .endm
 
-.macro multiply_P1_right_notbitsliced_m4f_asm nrows, ncols, cols
+.macro multiply_P1_right_m4f_asm nrows, ncols, cols
     .set m_vec_limbs, ((M + 15)/16)
     // TODO: remove cases that are no longer need with the new params
     .if \cols != 8 && \cols != 18 && \cols != 17 && \cols != 10 && \cols != 9 && \cols != 4 && \cols != 11
@@ -536,11 +536,11 @@
 @     multiply_P1_right_m4f_asm V, V, O
 
 
-.global multiply_P1_right_notbitsliced_m4f_V_V_O_asm
-.type multiply_P1_right_notbitsliced_m4f_V_V_O_asm, %function
+.global multiply_P1_right_m4f_V_V_O_asm
+.type multiply_P1_right_m4f_V_V_O_asm, %function
 .align 2
-multiply_P1_right_notbitsliced_m4f_V_V_O_asm:
-    multiply_P1_right_notbitsliced_m4f_asm V, V, O
+multiply_P1_right_m4f_V_V_O_asm:
+    multiply_P1_right_m4f_asm V, V, O
 
 @ .global multiply_P1_right_m4f_V_V_K_asm
 @ .type multiply_P1_right_m4f_V_V_K_asm, %function
@@ -548,24 +548,24 @@ multiply_P1_right_notbitsliced_m4f_V_V_O_asm:
 @ multiply_P1_right_m4f_V_V_K_asm:
 @     multiply_P1_right_m4f_asm V, V, K
 
-.global multiply_P1_right_notbitsliced_m4f_V_V_K_asm
-.type multiply_P1_right_notbitsliced_m4f_V_V_K_asm, %function
+.global multiply_P1_right_m4f_V_V_K_asm
+.type multiply_P1_right_m4f_V_V_K_asm, %function
 .align 2
-multiply_P1_right_notbitsliced_m4f_V_V_K_asm:
-    multiply_P1_right_notbitsliced_m4f_asm V, V, K
+multiply_P1_right_m4f_V_V_K_asm:
+    multiply_P1_right_m4f_asm V, V, K
 
 
-.global multiply_P1t_right_notbitsliced_m4f_V_V_O_asm
-.type multiply_P1t_right_notbitsliced_m4f_V_V_O_asm, %function
+.global multiply_P1t_right_m4f_V_V_O_asm
+.type multiply_P1t_right_m4f_V_V_O_asm, %function
 .align 2
-multiply_P1t_right_notbitsliced_m4f_V_V_O_asm:
-    multiply_P1t_right_notbitsliced_m4f_asm V, V, O
+multiply_P1t_right_m4f_V_V_O_asm:
+    multiply_P1t_right_m4f_asm V, V, O
 
-.global multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm
-.type multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm, %function
+.global multiply_P1t_right_m4f_first_V_V_O_asm
+.type multiply_P1t_right_m4f_first_V_V_O_asm, %function
 .align 2
-multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm:
-    multiply_P1t_right_notbitsliced_m4f_first_asm V, V, O
+multiply_P1t_right_m4f_first_V_V_O_asm:
+    multiply_P1t_right_m4f_first_asm V, V, O
 
 
 

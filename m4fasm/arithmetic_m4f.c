@@ -113,7 +113,7 @@ static void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const 
   }
 }
 
-static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O){
+static void multiply_P1P1t_right_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O){
     const int o_size = (O_MAX+7)/8;
     // input and outputs are padded to 64-bit limbs
     // intermediate representation is 32-bit limbs
@@ -137,9 +137,9 @@ static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t
 
         // do pairs of field elements (P1t)
         if(col >= 0){
-            multiply_P1t_right_notbitsliced_m4f_V_V_O_asm(&P1_O[((col)*m_vec_limbs_32*8) * o_size], table, P1t_ptr + m_vec_limbs_64 * (col), V_MAX-col-1);
+            multiply_P1t_right_m4f_V_V_O_asm(&P1_O[((col)*m_vec_limbs_32*8) * o_size], table, P1t_ptr + m_vec_limbs_64 * (col), V_MAX-col-1);
         } else {
-            multiply_P1t_right_notbitsliced_m4f_first_V_V_O_asm(P1_O, table, P1);
+            multiply_P1t_right_m4f_first_V_V_O_asm(P1_O, table, P1);
         }
 
 
@@ -147,21 +147,21 @@ static void multiply_P1P1t_right_notbitsliced_m4f(uint32_t *P1_O, const uint64_t
             P1t_ptr += m_vec_limbs_64*(V_MAX-col-1);
         P1t_ptr += m_vec_limbs_64*(V_MAX-(col+1)-1);
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P1_O, table, P1 + m_vec_limbs_64 * col, col+1);
+        multiply_P1_right_m4f_V_V_O_asm(P1_O, table, P1 + m_vec_limbs_64 * col, col+1);
     }
 }
 
 void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc) {
     (void)p;
     uint32_t P1_O[(O_MAX + 7)/8 *  (8*((M_MAX+7)/8)) * V_MAX] = {0};
-    multiply_P1P1t_right_notbitsliced_m4f(P1_O, P1, O);
+    multiply_P1P1t_right_m4f(P1_O, P1, O);
     repack_add((uint32_t *)acc, P1_O, V_MAX, O_MAX);
 }
 #if V_MAX % 2 != 0
 #error This implementation required even V
 #endif
 
-static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O){
+static void multiply_P1_right_transposed_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O){
     const int k_size = (K_MAX+7)/8;
     const int m_vec_limbs = (M_MAX + 15)/ 16;
 
@@ -176,7 +176,7 @@ static void multiply_P1_right_transposed_notbitsliced_m4f(uint32_t *P1_O, const 
         // build table.
         multiply_P1_right_m4f_K_asm2_transposed(table, O + col, col);
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_K_asm(P1_O, table, P1 + m_vec_limbs * col, col+1);
+        multiply_P1_right_m4f_V_V_K_asm(P1_O, table, P1 + m_vec_limbs * col, col+1);
     }
 }
 
@@ -185,12 +185,12 @@ void P1_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char
     // TODO: try to eliminate requiring M_MAX+7
     uint32_t P1_Vt[(K_MAX + 7)/8 * (8*((M_MAX+7)/8)) * V_MAX] = {0};
 
-    multiply_P1_right_transposed_notbitsliced_m4f((uint32_t *)P1_Vt, P1, V);
+    multiply_P1_right_transposed_m4f((uint32_t *)P1_Vt, P1, V);
 
     repack_add((uint32_t *)acc, P1_Vt, V_MAX, K_MAX);
 }
 
-static void multiply_P1_right_notbitsliced_m4f(uint32_t *P2, const uint64_t *P1, const unsigned char *O){
+static void multiply_P1_right_m4f(uint32_t *P2, const uint64_t *P1, const unsigned char *O){
     const int o_size = (O_MAX+7)/8;
     const int m_vec_limbs = (M_MAX + 15)/ 16;
 
@@ -206,7 +206,7 @@ static void multiply_P1_right_notbitsliced_m4f(uint32_t *P2, const uint64_t *P1,
         multiply_P1_right_m4f_O_asm2(table, O + col*O_MAX, col);
 
         // do pairs of field elements (P1)
-        multiply_P1_right_notbitsliced_m4f_V_V_O_asm(P2, table, P1 + m_vec_limbs * col, col+1);
+        multiply_P1_right_m4f_V_V_O_asm(P2, table, P1 + m_vec_limbs * col, col+1);
 
     }
 }
@@ -215,7 +215,7 @@ void P1_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char*
     (void)p;
     // TODO: try to eliminate requiring M_MAX+7
     uint32_t P1_O[(O_MAX + 7)/8 * (8*((M_MAX+7)/8)) * V_MAX] = {0};
-    multiply_P1_right_notbitsliced_m4f(P1_O, P1, O);
+    multiply_P1_right_m4f(P1_O, P1, O);
     repack_add((uint32_t *)acc, P1_O, V_MAX, O_MAX);
 }
 

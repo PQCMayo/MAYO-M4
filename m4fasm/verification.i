@@ -1,75 +1,8 @@
 
 // TODO: elimninate include; pass as args
  #include "asm_params.h"
- /*
- .macro macro_calculate_PS_m4f_asm m_legs, n, k
-    push.w {r4-r11, r14}
-    accu0 .req r3
-    accu1 .req r4
-    accu2 .req r5
-    accu3 .req r6
-
-    mat0 .req r7
-    mat1 .req r8
-    mat2 .req r9
-    mat3 .req r10
-
-    add.w r11, r2, r3
-    mov.w r14, 16*\m_legs
-
-    1:
-    .set i, 0
-    .rept \m_legs
-        ldr.w mat1, [r1, #1*4*\m_legs]
-        ldr.w mat2, [r1, #2*4*\m_legs]
-        ldr.w mat3, [r1, #3*4*\m_legs]
-        ldr.w mat0, [r1], #4
-
-
-        .rept \k
-            ldrb.w r12, [r2], \n
-            mla.w r12, r14, r12, r0
-
-            ldr.w accu0, [r12, #0*4*\m_legs]
-            ldr.w accu1, [r12, #1*4*\m_legs]
-            ldr.w accu2, [r12, #2*4*\m_legs]
-            ldr.w accu3, [r12, #3*4*\m_legs]
-
-            eor.w accu0, mat0
-            eor.w accu1, mat1
-            eor.w accu2, mat2
-            eor.w accu3, mat3
-
-            str.w accu0, [r12, #0*4*\m_legs]
-            str.w accu1, [r12, #1*4*\m_legs]
-            str.w accu2, [r12, #2*4*\m_legs]
-            str.w accu3, [r12, #3*4*\m_legs]
-
-            add.w r0, r0, 16*16*\m_legs
-        .endr
-
-        .if i < \m_legs-1
-        sub.w r2, \n*\k
-        mov.w r12, 16*16*\k*\m_legs-4
-        sub.w r0, r0, r12
-        .else
-        sub.w r2, \n*\k-1
-        mov.w r12, 16*16*\k*\m_legs+(\m_legs-1)*4
-        sub.w r0, r0, r12
-        .endif
-
-        .set i,i+1
-    .endr
-    add.w r1, r1, #3*4*\m_legs
-    cmp.w r2, r11
-    bne.w 1b
-
-    pop.w {r4-r11, pc}
-.endm
-*/
-
-
- .macro macro_calculate_PS_m4f_stack_asm m_vec_limbs, n, k
+ 
+  .macro macro_calculate_PS_m4f_stack_asm m_vec_limbs, n, k
     push.w {r4-r11, r14}
     accu0 .req r3
     accu1 .req r4

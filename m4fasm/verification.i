@@ -1,8 +1,4 @@
-
-// TODO: elimninate include; pass as args
- #include "asm_params.h"
- 
-  .macro macro_calculate_PS_m4f_stack_asm m_vec_limbs, n, k
+.macro macro_calculate_PS_m4f_stack_asm m_vec_limbs, n, k
     push.w {r4-r11, r14}
     accu0 .req r3
     accu1 .req r4

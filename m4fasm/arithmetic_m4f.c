@@ -107,7 +107,6 @@ static void EF_m4f(unsigned char *A, int nrows, int ncols) {
 // - y is a vector with m elements
 // - r and x are k*o bytes long
 // return: 1 on success, 0 on failure
-// TODO: clang-format all code
 int sample_solution(const mayo_params_t *p, unsigned char *A,
                            const unsigned char *y, const unsigned char *r,
                            unsigned char *x, int _k, int _o, int _m, int _A_cols ) {

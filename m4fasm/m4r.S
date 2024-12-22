@@ -297,7 +297,6 @@
     .if \cols == 17
     mla.w idx0, idx0, r14, r1
 
-    // TODO: why do we accumulate here instead of just doing a str; accumulation is done separately anyway
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
     ldr.w aaa2, [r0, #8]

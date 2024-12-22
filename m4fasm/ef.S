@@ -705,8 +705,6 @@ backsub_inner_asm:
 
     ldrb.w r0, [r0]
     cmp.n r3, #0
-
-    // TODO: check if mul works too
     it eq
     moveq.w r0, #0
 

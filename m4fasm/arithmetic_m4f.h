@@ -30,13 +30,8 @@ void mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm(uint64_t *acc, const unsigned char 
 
 
 // verification
-// TODO: remove or implment
-//#if N_MAX <= 78
-//void calculate_PS_m4f_asm(uint32_t *acc, const uint32_t *P, const unsigned char *S, const int cols);
-//#else
 void calculate_PS_m4f_stack_asm(uint64_t *acc, const uint64_t *P, const unsigned char *S, const int cols);
 void multiply_bins_stack_asm(uint64_t *out, uint64_t *bins, const int cols);
-//#endif
 
 void multiply_bins_asm(uint64_t *out, uint64_t *bins, const int cols);
 void calculate_SPS_m4f_asm(uint64_t *acc, const uint64_t *PS, const unsigned char * S);

@@ -461,9 +461,7 @@ multiply_P1_right_m4f_O_asm2:
 
     .rept o_size
         .set t, 0
-
-         // contains only 4 elements need to pack it 
-        // TODO: optimize this: only load the number of elements we need
+        // contains only 4 elements need to pack it 
         ldr.w r5, [r1]
         ldr.w r6, [r1, #4]
         and.w r4, r5, #0xF
@@ -501,7 +499,6 @@ multiply_P1_right_m4f_O_asm2:
 
 
         .set t, 4
-        // TODO: optimize this: only load the number of elements we need
         ldr.w r5, [r1, O]
         ldr.w r6, [r1, O+4]
         and.w r4, r5, #0xF

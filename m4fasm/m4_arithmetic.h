@@ -142,7 +142,7 @@ void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const int dim
 #error This implementation requires even V
 #endif
 
-static inline
+static __attribute__ ((noinline,unused))
 void multiply_P1_right_m4f(uint32_t *P2, const uint64_t *P1, const unsigned char *O){
     const int o_size = (O_MAX+7)/8;
     const int m_vec_limbs = (M_MAX + 15)/ 16;
@@ -164,7 +164,7 @@ void multiply_P1_right_m4f(uint32_t *P2, const uint64_t *P1, const unsigned char
     }
 }
 
-static inline
+static __attribute__ ((noinline,unused))
 void P1_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc){
     (void)p;
     // TODO: try to eliminate requiring M_MAX+7
@@ -173,7 +173,7 @@ void P1_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char*
     repack_add((uint32_t *)acc, P1_O, V_MAX, O_MAX);
 }
 
-static inline
+static __attribute__ ((noinline,unused))
 void multiply_P1_right_transposed_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O){
     const int k_size = (K_MAX+7)/8;
     const int m_vec_limbs = (M_MAX + 15)/ 16;
@@ -193,7 +193,7 @@ void multiply_P1_right_transposed_m4f(uint32_t *P1_O, const uint64_t *P1, const 
     }
 }
 
-static inline
+static __attribute__ ((noinline,unused))
 void P1_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char* V, uint64_t* acc){
     (void)p;
     // TODO: try to eliminate requiring M_MAX+7
@@ -243,7 +243,7 @@ static void multiply_P1P1t_right_m4f(uint32_t *P1_O, const uint64_t *P1, const u
     }
 }
 
-static inline
+static __attribute__ ((noinline,unused))
 void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned char* O, uint64_t* acc) {
     (void)p;
     uint32_t P1_O[(O_MAX + 7)/8 *  (8*((M_MAX+7)/8)) * V_MAX] = {0};
@@ -255,7 +255,7 @@ void P1P1t_times_O(const mayo_params_t* p, const uint64_t* P1, const unsigned ch
 
 // compute P * S^t = [ P1  P2 ] * [S1] = [P1*S1 + P2*S2]
 //                   [  0  P3 ]   [S2]   [        P3*S2]
-static inline
+static __attribute__ ((noinline,unused))
 void m_calculate_PS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *S,
                     const int _m, const int _v, const int _o, const int _k, uint64_t *PS)
 {
@@ -300,7 +300,7 @@ void m_calculate_PS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, 
     // worthwhile
 }
 
-static inline
+static __attribute__ ((noinline,unused))
 void m_calculate_SPS(const uint64_t *PS, const unsigned char *S, int _m, int _k, int  _n, uint64_t *SPS){
     (void) _n;
     (void) _m;
@@ -322,7 +322,7 @@ void m_calculate_SPS(const uint64_t *PS, const unsigned char *S, int _m, int _k,
 
 
 
-static inline
+static __attribute__ ((noinline,unused))
 void compute_M_and_VPV(const mayo_params_t* p, const unsigned char* Vdec, const uint64_t *L, const uint64_t *P1, uint64_t *VL, uint64_t *VP1V){
 
     const int param_k = PARAM_k(p);
@@ -356,7 +356,7 @@ void compute_P3(const mayo_params_t* p, const uint64_t* P1, uint64_t *P2, const 
 //                   [  0  P3 ]   [S2]   [        P3*S2]
 // compute S * PS  = [ S1 S2 ] * [ P1*S1 + P2*S2 = P1 ] = [ S1*P1 + S2*P2 ]
 //                               [         P3*S2 = P2 ]
-static inline void m_calculate_PS_SPS(const mayo_params_t *p, const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *s,
+static __attribute__ ((noinline,unused)) void m_calculate_PS_SPS(const mayo_params_t *p, const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *s,
                                       uint64_t *SPS) {
     // compute P * S^t = {(P1, P2), (0, P3)} * S^t = {(P1*S1 + P2*S2), (P3 * S2)}
     #ifndef ENABLE_PARAMS_DYNAMIC

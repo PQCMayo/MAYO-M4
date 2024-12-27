@@ -295,9 +295,6 @@ void m_calculate_PS(const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, 
 
         multiply_bins_stack_asm(PS + col * m_vec_limbs, accumulator, n);
     }
-
-    // TODO: we had a faster version which requires more memory, need to evaluate if that is still
-    // worthwhile
 }
 
 static __attribute__ ((noinline,unused))

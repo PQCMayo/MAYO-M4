@@ -6,15 +6,19 @@ on:
     branches: [ "main" ]
 jobs:
   build-all:
+    strategy:
+      matrix:
+        arm-gcc-release: [14.2.Rel1, 13.3.Rel1, 12.3.Rel1]
     runs-on: ubuntu-latest
+    name: nucleo-l4r5zi build (gcc ${{ matrix.arm-gcc-release }})
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Install Toolchain
-        uses: carlosperate/arm-none-eabi-gcc-action@v1.8.0
+        uses: carlosperate/arm-none-eabi-gcc-action@v1.10.0
         with:
-          release: 13.2.Rel1
+          release: ${{ matrix.arm-gcc-release }}
       - name: Build All (nucleo-l4r5zi)
         run: make PLATFORM=nucleo-l4r5zi -j2

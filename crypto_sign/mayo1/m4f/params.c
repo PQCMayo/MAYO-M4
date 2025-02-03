@@ -1,1 +1,1 @@
-../../mayo1/ref/params.c
+../ref/params.c

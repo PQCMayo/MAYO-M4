@@ -1,1 +1,1 @@
-../../mayo1/m4f/mayo.c
+../ref/mayo.c

@@ -1,1 +1,1 @@
-../../mayo1/m4f/verification.S
+../../../m4fasm/verification.S

@@ -1,0 +1,24 @@
+name: mps2-an386 build
+on:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ "main" ]
+jobs:
+  build-all:
+    strategy:
+      matrix:
+        arm-gcc-release: [14.2.Rel1, 13.3.Rel1, 12.3.Rel1]
+    runs-on: ubuntu-latest
+    name: mps2-an386 build (gcc ${{ matrix.arm-gcc-release }})
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Toolchain
+        uses: carlosperate/arm-none-eabi-gcc-action@v1.10.0
+        with:
+          release: ${{ matrix.arm-gcc-release }}
+      - name: Build All (mps2-an386)
+        run: make PLATFORM=mps2-an386 -j2

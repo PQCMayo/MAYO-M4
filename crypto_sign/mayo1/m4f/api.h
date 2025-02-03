@@ -1,1 +1,1 @@
-../../mayo1/ref/api.h
+../ref/api.h

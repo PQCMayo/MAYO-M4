@@ -8,7 +8,7 @@
 #define MAYO_MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MAYO_MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-
+volatile unsigned char unsigned_char_blocker = 0;
 // EF
 void ef_bitslice_asm(uint32_t *a_bs, unsigned char *a);
 void ef_unbitslice_asm(unsigned char *a, uint32_t *a_bs);

@@ -5,14 +5,13 @@
 
 .macro multiply_P1t_right_m4f_asm nrows, ncols, cols
     .set m_vec_limbs, ((M + 15)/16)
-    // cols=O
-    // MAYO1: 8, MAYO2: 17, MAYO3: 10
-    .if \cols != 8 && \cols != 17 && \cols != 10
+    // cols=O; branches below key off col_size, not \cols
+    .set col_size, ((\cols+7)/8)
+    .if col_size < 1 || col_size > 3
     error
     .endif
     word0 .req r10
     word1 .req r11
-    .set col_size, ((\cols+7)/8)
 
 
     aaa0 .req r4
@@ -23,10 +22,10 @@
     bbb1 .req r9
     bbb2 .req r12
 
-    .if \cols == 10
+    .if col_size == 2
     push.w {r4-r11,r14}
     aaa2 .req r14
-    .elseif \cols == 17
+    .elseif col_size == 3
     push.w {r4-r11,r14}
     aaa2 .req r7
     .else
@@ -34,7 +33,7 @@
     aaa2 .req r7
     .endif
 
-    .if \cols == 17
+    .if col_size == 3
     mov.w r14, #12
     .endif
 
@@ -49,14 +48,14 @@
     .rept 8
     ubfx.w idx0, word0, #4*i, #4
 
-    .if \cols == 8
+    .if col_size == 1
     ldr.w aaa0, [r0]
     ldr.w bbb0, [r1, idx0, lsl#2]
     eor.w aaa0, bbb0
     str.w aaa0, [r0], #4
     .endif
 
-    .if \cols ==17
+    .if col_size == 3
     mla.w idx0, idx0, r14, r1
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -73,7 +72,7 @@
     .endif
 
 
-    .if \cols == 10
+    .if col_size == 2
     add.w idx0, r1, idx0, lsl#3
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -106,14 +105,14 @@
     bfi.w idx0, word1, #4, #4
     ror.w word1, word1, #4
 
-    .if \cols == 8
+    .if col_size == 1
     ldr.w aaa0, [r0]
     ldr.w bbb0, [r1, idx0, lsl#2]
     eor.w aaa0, bbb0
     str.w aaa0, [r0], #4
     .endif
 
-    .if \cols == 17
+    .if col_size == 3
     mla.w idx0, idx0, r14, r1
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -129,7 +128,7 @@
     str.w aaa2, [r0], #4
     .endif
 
-    .if \cols == 10
+    .if col_size == 2
     add.w idx0, r1, idx0, lsl#3
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -152,7 +151,7 @@
 
     2:
 
-    .if \cols == 10 || \cols == 17
+    .if col_size >= 2
     pop.w {r4-r11, pc}
     .else
     pop.w {r4-r11}
@@ -175,17 +174,26 @@
 
 .macro multiply_P1t_right_m4f_first_asm nrows, ncols, cols
     word0 .req r3
+    // cols = K or O; branches below key off col_size, not \cols
     .set col_size, ((\cols+7)/8)
+    .if col_size < 1 || col_size > 3
+    error
+    .endif
 
     aaa0 .req r4
     aaa1 .req r5
     idx0 .req r6
-    idx1 .req r7
+    aaa2 .req r7
     bbb0 .req r8
     bbb1 .req r9
+    bbb2 .req r10
 
-    push.w {r4-r9}
-    
+    push.w {r4-r11}
+
+    .if col_size == 3
+    mov.w r11, #12
+    .endif
+
     mov.w r12, \nrows
 
     1:
@@ -197,6 +205,14 @@
     ubfx.w idx0, word0, #4*i, #4
     lsl.w idx0, #4
 
+    .if col_size == 1
+    ldr.w aaa0, [r0]
+    ldr.w bbb0, [r1, idx0, lsl#2]
+    eor.w aaa0, bbb0
+    str.w aaa0, [r0], #4
+    .endif
+
+    .if col_size == 2
     add.w idx0, r1, idx0, lsl#3
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -206,36 +222,50 @@
     eor.w aaa1, bbb1
     str.w aaa0, [r0], #4
     str.w aaa1, [r0], #4
+    .endif
+
+    .if col_size == 3
+    mla.w idx0, idx0, r11, r1
+    ldr.w aaa0, [r0]
+    ldr.w aaa1, [r0, #4]
+    ldr.w aaa2, [r0, #8]
+    ldr.w bbb0, [idx0]
+    ldr.w bbb1, [idx0, #4]
+    ldr.w bbb2, [idx0, #8]
+    eor.w aaa0, bbb0
+    eor.w aaa1, bbb1
+    eor.w aaa2, bbb2
+    str.w aaa0, [r0], #4
+    str.w aaa1, [r0], #4
+    str.w aaa2, [r0], #4
+    .endif
 
     .set i,i+1
     .endr
     .endr
-    
+
     subs.w r12, #1
     bne.w 1b
 
-
-        
-    
-    pop.w {r4-r9}
+    pop.w {r4-r11}
     bx lr
 
     .unreq word0
     .unreq aaa0
     .unreq aaa1
+    .unreq aaa2
     .unreq idx0
-    .unreq idx1
     .unreq bbb0
     .unreq bbb1
+    .unreq bbb2
 
 .endm
 
 .macro multiply_P1_right_m4f_asm nrows, ncols, cols
     .set m_vec_limbs, ((M + 15)/16)
-    // cols = K or O
-    // O: MAYO1: 8,  MAYO2: 17, MAYO3: 10
-    // K: MAYO1: 10, MAYO2: 4, MAYO3: 11
-    .if \cols != 8 && \cols != 17 && \cols != 10 && \cols != 4 && \cols != 11
+    // cols = K or O; branches below key off col_size, not \cols
+    .set col_size, ((\cols+7)/8)
+    .if col_size < 1 || col_size > 3
     error
     .endif
     word0 .req r3
@@ -250,10 +280,10 @@
     bbb0 .req r8
     bbb1 .req r9
     bbb2 .req r12
-    .if \cols == 10 || \cols == 11
+    .if col_size == 2
     push.w {r4-r11,r14}
     aaa2 .req r14
-    .elseif \cols == 17
+    .elseif col_size == 3
     push.w {r4-r11,r14}
     aaa2 .req r7
     .else
@@ -261,7 +291,7 @@
     aaa2 .req r7
     .endif
 
-    .if \cols == 17
+    .if col_size == 3
     mov.w r14, #12
     .endif
 
@@ -287,14 +317,14 @@
     ror.w word1, word1, #4
 
  
-    .if \cols == 8 || \cols == 4
+    .if col_size == 1
     ldr.w aaa0, [r0]
     ldr.w bbb0, [r1, idx0, lsl#2]
     eor.w aaa0, bbb0
     str.w aaa0, [r0], #4
     .endif
 
-    .if \cols == 17
+    .if col_size == 3
     mla.w idx0, idx0, r14, r1
 
     ldr.w aaa0, [r0]
@@ -311,7 +341,7 @@
     str.w aaa2, [r0], #4
     .endif
 
-    .if \cols == 10 || \cols == 11
+    .if col_size == 2
     add.w idx0, r1, idx0, lsl#3
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -347,14 +377,14 @@
     ubfx.w idx0, word0, #4*i, #4
     lsl.w idx0, #4
 
-    .if \cols == 8 || \cols == 4
+    .if col_size == 1
     ldr.w aaa0, [r0]
     ldr.w bbb0, [r1, idx0, lsl#2]
     eor.w aaa0, bbb0
     str.w aaa0, [r0], #4
     .endif
 
-    .if \cols == 17
+    .if col_size == 3
     mla.w idx0, idx0, r14, r1
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -370,7 +400,7 @@
     str.w aaa2, [r0], #4
     .endif
 
-    .if \cols == 10 || \cols == 11
+    .if col_size == 2
     add.w idx0, r1, idx0, lsl#3
     ldr.w aaa0, [r0]
     ldr.w aaa1, [r0, #4]
@@ -387,7 +417,7 @@
 
 
 
-    .if \cols == 10 || \cols == 17 || \cols == 11
+    .if col_size >= 2
     pop.w {r4-r11, pc}
     .else
     pop.w {r4-r10}
@@ -432,6 +462,19 @@ multiply_P1t_right_m4f_V_V_O_asm:
 .align 2
 multiply_P1t_right_m4f_first_V_V_O_asm:
     multiply_P1t_right_m4f_first_asm V, V, O
+
+
+.global multiply_P1t_right_m4f_V_V_K_asm
+.type multiply_P1t_right_m4f_V_V_K_asm, %function
+.align 2
+multiply_P1t_right_m4f_V_V_K_asm:
+    multiply_P1t_right_m4f_asm V, V, K
+
+.global multiply_P1t_right_m4f_first_V_V_K_asm
+.type multiply_P1t_right_m4f_first_V_V_K_asm, %function
+.align 2
+multiply_P1t_right_m4f_first_V_V_K_asm:
+    multiply_P1t_right_m4f_first_asm V, V, K
 
 
 @ // multiply nibbles by x mod x^4 + x + 1
@@ -556,255 +599,80 @@ multiply_P1_right_m4f_K_asm2_transposed:
     // K: MAYO1: 10, MAYO2: 4, MAYO3: 11
     .set o_size, ((K+7)/8)
 
+    // pack \cnt rows of a column pair into r4, one nibble per row
+    .macro k_pack_col cnt, off
+        ldrb.w r4, [r1, V*0+\off]
+        .set j, 1
+        .irp reg, r5, r6, r7, r8, r9, r10, r11
+            .if j < \cnt
+            ldrb.w \reg, [r1, V*j+\off]
+            .endif
+            .set j, j+1
+        .endr
+        .set j, 1
+        .irp reg, r5, r6, r7, r8, r9, r10, r11
+            .if j < \cnt
+            eor.w r4, r4, \reg, lsl j*4
+            .endif
+            .set j, j+1
+        .endr
+    .endm
+
+    .macro k_chunk cnt
+        k_pack_col \cnt, 0
+        .set t, 0
+        .rept 4
+            .if t > 0
+            mulx r4, r5
+            .endif
+            .rept (1<<t)
+                ldr.w r5, [r0], #4*o_size
+                eor.w r5, r4
+                str.w r5, [r0, (1<<t)*4*o_size - 4*o_size]
+            .endr
+            sub.w r0, (1<<t)*4*o_size
+            .set t,t+1
+        .endr
+
+        k_pack_col \cnt, 1
+        .set t, 4
+        .rept 4
+            .if t > 4
+            mulx r4, r5
+            .endif
+            .rept (1<<t)/4
+                ldr.w r6, [r0,#1*4*o_size]
+                ldr.w r7, [r0,#2*4*o_size]
+                ldr.w r12, [r0,#3*4*o_size]
+                ldr.w r5, [r0], #4*4*o_size
+                eor.w r5, r4
+                eor.w r6, r4
+                eor.w r7, r4
+                eor.w r12, r4
+                str.w r5, [r0, (1<<t)*4*o_size - 4*4*o_size]
+                str.w r6, [r0, (1<<t)*4*o_size - 3*4*o_size]
+                str.w r7, [r0, (1<<t)*4*o_size - 2*4*o_size]
+                str.w r12, [r0, (1<<t)*4*o_size - 1*4*o_size]
+            .endr
+            sub.w r0, (1<<t)*4*o_size
+            .set t,t+1
+        .endr
+    .endm
 
     .rept o_size-1
-        ldrb.w r4,  [r1, V*0]
-        ldrb.w r5,  [r1, V*1]
-        ldrb.w r6,  [r1, V*2]
-        ldrb.w r7,  [r1, V*3]
-        ldrb.w r8,  [r1, V*4]
-        ldrb.w r9,  [r1, V*5]
-        ldrb.w r10, [r1, V*6]
-        ldrb.w r11, [r1, V*7]
-
-        eor.w r4, r4, r5, lsl 1*4
-        eor.w r4, r4, r6, lsl 2*4
-        eor.w r4, r4, r7, lsl 3*4
-        eor.w r4, r4, r8, lsl 4*4
-        eor.w r4, r4, r9, lsl 5*4
-        eor.w r4, r4, r10, lsl 6*4
-        eor.w r4, r4, r11, lsl 7*4
-
-    .set t, 0
-    .rept 4
-        .if t > 0
-        mulx r4, r5
-        .endif
-        .rept (1<<t)
-            ldr.w r5, [r0], #4*o_size
-            eor.w r5, r4
-            str.w r5, [r0, (1<<t)*4*o_size - 4*o_size]
-        .endr
-        sub.w r0, (1<<t)*4*o_size
-        .set t,t+1
+        k_chunk 8
+        add.w r0, #4
+        add.w r1, 8*V
     .endr
 
-
-    ldrb.w r4,  [r1, V*0+1]
-    ldrb.w r5,  [r1, V*1+1]
-    ldrb.w r6,  [r1, V*2+1]
-    ldrb.w r7,  [r1, V*3+1]
-    ldrb.w r8,  [r1, V*4+1]
-    ldrb.w r9,  [r1, V*5+1]
-    ldrb.w r10, [r1, V*6+1]
-    ldrb.w r11, [r1, V*7+1]
-
-    eor.w r4, r4, r5, lsl 1*4
-    eor.w r4, r4, r6, lsl 2*4
-    eor.w r4, r4, r7, lsl 3*4
-    eor.w r4, r4, r8, lsl 4*4
-    eor.w r4, r4, r9, lsl 5*4
-    eor.w r4, r4, r10, lsl 6*4
-    eor.w r4, r4, r11, lsl 7*4
-
-    .set t, 4
-    .rept 4
-        .if t > 4
-        mulx r4, r5
-        .endif
-        .rept (1<<t)/4
-            ldr.w r6, [r0,#1*4*o_size]
-            ldr.w r7, [r0,#2*4*o_size]
-            ldr.w r12, [r0,#3*4*o_size]
-            ldr.w r5, [r0], #4*4*o_size
-            eor.w r5, r4
-            eor.w r6, r4
-            eor.w r7, r4
-            eor.w r12, r4
-            str.w r5, [r0, (1<<t)*4*o_size - 4*4*o_size]
-            str.w r6, [r0, (1<<t)*4*o_size - 3*4*o_size]
-            str.w r7, [r0, (1<<t)*4*o_size - 2*4*o_size]
-            str.w r12, [r0, (1<<t)*4*o_size - 1*4*o_size]
-        .endr
-
-        sub.w r0, (1<<t)*4*o_size
-        .set t,t+1
-    .endr
-
-    add.w r0, #4
-    add.w r1, 8*V
-
-    .endr
-
-    .if K != 4 && K != 11 && K != 10
+    // rows left over after the full chunks
+    .set k_tail, K - 8*(o_size-1)
+    .if k_tail < 1 || k_tail > 8
         error
     .endif
-    .if K == 4
-    // last element
-    ldrb.w r4, [r1]
-    ldrb.w r5, [r1, 1*V]
-    ldrb.w r6, [r1, 2*V]
-    ldrb.w r7, [r1, 3*V]
+    k_chunk k_tail
 
-    eor.w r4, r4, r5, lsl 1*4
-    eor.w r4, r4, r6, lsl 2*4
-    eor.w r4, r4, r7, lsl 3*4
-
-    .set t, 0
-    .rept 4
-        .if t > 0
-        mulx r4, r5
-        .endif
-        .rept (1<<t)
-            ldr.w r5, [r0], #4*o_size
-            eor.w r5, r4
-            str.w r5, [r0, (1<<t)*4*o_size - 4*o_size]
-        .endr
-        sub.w r0, (1<<t)*4*o_size
-        .set t,t+1
-    .endr
-
-    ldrb.w r4, [r1, #1]
-    ldrb.w r5, [r1, V+1]
-    ldrb.w r6, [r1, 2*V+1]
-    ldrb.w r7, [r1, 3*V+1]
-
-    eor.w r4, r4, r5, lsl 1*4
-    eor.w r4, r4, r6, lsl 2*4
-    eor.w r4, r4, r7, lsl 3*4
-
-    .set t, 4
-    .rept 4
-        .if t > 4
-        mulx r4, r5
-        .endif
-        .rept (1<<t)/4
-            ldr.w r6, [r0,#1*4*o_size]
-            ldr.w r7, [r0,#2*4*o_size]
-            ldr.w r12, [r0,#3*4*o_size]
-            ldr.w r5, [r0], #4*4*o_size
-            eor.w r5, r4
-            eor.w r6, r4
-            eor.w r7, r4
-            eor.w r12, r4
-            str.w r5, [r0, (1<<t)*4*o_size - 4*4*o_size]
-            str.w r6, [r0, (1<<t)*4*o_size - 3*4*o_size]
-            str.w r7, [r0, (1<<t)*4*o_size - 2*4*o_size]
-            str.w r12, [r0, (1<<t)*4*o_size - 1*4*o_size]
-        .endr
-
-        sub.w r0, (1<<t)*4*o_size
-        .set t,t+1
-    .endr
-    .endif
-
-
-    .if K == 10
-    // last elements
-    ldrb.w r4, [r1]
-    ldrb.w r5, [r1, 1*V]
-
-    eor.w r4, r4, r5, lsl 1*4
-
-
-    .set t, 0
-    .rept 4
-        .if t > 0
-        mulx r4, r5
-        .endif
-        .rept (1<<t)
-            ldr.w r5, [r0], #4*o_size
-            eor.w r5, r4
-            str.w r5, [r0, (1<<t)*4*o_size - 4*o_size]
-        .endr
-        sub.w r0, (1<<t)*4*o_size
-        .set t,t+1
-    .endr
-
-    ldrb.w r4, [r1, #1]
-    ldrb.w r5, [r1, V+1]
-
-    eor.w r4, r4, r5, lsl 1*4
-    .set t, 4
-    .rept 4
-        .if t > 4
-        mulx r4, r5
-        .endif
-        .rept (1<<t)/4
-            ldr.w r6, [r0,#1*4*o_size]
-            ldr.w r7, [r0,#2*4*o_size]
-            ldr.w r12, [r0,#3*4*o_size]
-            ldr.w r5, [r0], #4*4*o_size
-            eor.w r5, r4
-            eor.w r6, r4
-            eor.w r7, r4
-            eor.w r12, r4
-            str.w r5, [r0, (1<<t)*4*o_size - 4*4*o_size]
-            str.w r6, [r0, (1<<t)*4*o_size - 3*4*o_size]
-            str.w r7, [r0, (1<<t)*4*o_size - 2*4*o_size]
-            str.w r12, [r0, (1<<t)*4*o_size - 1*4*o_size]
-        .endr
-
-        sub.w r0, (1<<t)*4*o_size
-        .set t,t+1
-    .endr
-    .endif
-
-    .if K == 11
-    // last elements
-    ldrb.w r4, [r1]
-    ldrb.w r5, [r1, 1*V]
-    ldrb.w r6, [r1, 2*V]
-
-    eor.w r4, r4, r5, lsl 1*4
-    eor.w r4, r4, r6, lsl 2*4
-
-
-    .set t, 0
-    .rept 4
-        .if t > 0
-        mulx r4, r5
-        .endif
-        .rept (1<<t)
-            ldr.w r5, [r0], #4*o_size
-            eor.w r5, r4
-            str.w r5, [r0, (1<<t)*4*o_size - 4*o_size]
-        .endr
-        sub.w r0, (1<<t)*4*o_size
-        .set t,t+1
-    .endr
-
-    ldrb.w r4, [r1, #1]
-    ldrb.w r5, [r1, V+1]
-    ldrb.w r6, [r1, 2*V+1]
-
-    eor.w r4, r4, r5, lsl 1*4
-    eor.w r4, r4, r6, lsl 2*4
-
-    .set t, 4
-    .rept 4
-        .if t > 4
-        mulx r4, r5
-        .endif
-        .rept (1<<t)/4
-            ldr.w r6, [r0,#1*4*o_size]
-            ldr.w r7, [r0,#2*4*o_size]
-            ldr.w r12, [r0,#3*4*o_size]
-            ldr.w r5, [r0], #4*4*o_size
-            eor.w r5, r4
-            eor.w r6, r4
-            eor.w r7, r4
-            eor.w r12, r4
-            str.w r5, [r0, (1<<t)*4*o_size - 4*4*o_size]
-            str.w r6, [r0, (1<<t)*4*o_size - 3*4*o_size]
-            str.w r7, [r0, (1<<t)*4*o_size - 2*4*o_size]
-            str.w r12, [r0, (1<<t)*4*o_size - 1*4*o_size]
-        .endr
-
-        sub.w r0, (1<<t)*4*o_size
-        .set t,t+1
-    .endr
-    .endif
-
+    .purgem k_pack_col
+    .purgem k_chunk
     pop.w {r4-r11}
     bx lr

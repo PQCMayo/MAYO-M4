@@ -25,3 +25,10 @@ mul_add_mat_x_m_mat_m4f_K_V_K_triangular_asm:
 .align 2
 mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm:
     mul_add_mat_trans_x_m_mat_m4f V, O, O, M
+
+//void mul_add_mat_trans_x_m_mat_m4f_V_O_K_asm(uint64_t *acc, const unsigned char *mat, const uint64_t *bs_mat);
+.global mul_add_mat_trans_x_m_mat_m4f_V_O_K_asm
+.type mul_add_mat_trans_x_m_mat_m4f_V_O_K_asm, %function
+.align 2
+mul_add_mat_trans_x_m_mat_m4f_V_O_K_asm:
+    mul_add_mat_trans_x_m_mat_m4f V, O, K, M

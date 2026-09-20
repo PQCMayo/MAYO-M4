@@ -16,11 +16,14 @@ void multiply_P1_right_m4f_V_V_O_asm(uint32_t *acc, const uint32_t *table, const
 
 void multiply_P1_right_m4f_K_asm2_transposed(uint32_t *table, const unsigned char *O, int col);
 void multiply_P1_right_m4f_V_V_K_asm(uint32_t *acc, const uint32_t *table, const uint64_t *P1, int rows);
+void multiply_P1t_right_m4f_V_V_K_asm(uint32_t *acc, const uint32_t *table, const uint64_t *P1, int rows);
+void multiply_P1t_right_m4f_first_V_V_K_asm(uint32_t *acc, const uint32_t *table, const uint64_t *P1);
 
 // matmul
 void mul_add_mat_x_m_mat_m4f_K_V_O_triangular_asm(uint64_t *acc, const unsigned char *mat, const uint64_t *bs_mat);
 void mul_add_mat_x_m_mat_m4f_K_V_K_triangular_asm(uint64_t *acc, const unsigned char *mat, const uint64_t *bs_mat);
 void mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm(uint64_t *acc, const unsigned char *mat, const uint64_t *bs_mat);
+void mul_add_mat_trans_x_m_mat_m4f_V_O_K_asm(uint64_t *acc, const unsigned char *mat, const uint64_t *bs_mat);
 
 
 // verification
@@ -37,9 +40,12 @@ void mul_add_mat_trans_x_m_mat(const int m_vec_limbs, const unsigned char *mat, 
     (void) m_vec_limbs;
     (void) mat_rows;
     (void) mat_cols;
-    (void) bs_mat_cols;
 
-    mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm(acc, mat, bs_mat);
+    if (bs_mat_cols == K_MAX) {
+        mul_add_mat_trans_x_m_mat_m4f_V_O_K_asm(acc, mat, bs_mat);
+    } else {
+        mul_add_mat_trans_x_m_mat_m4f_V_O_O_asm(acc, mat, bs_mat);
+    }
 }
 
 // multiplies a single matrix with m matrices and adds result to acc
@@ -107,8 +113,28 @@ void repack_add(uint32_t *out, const uint32_t *P2, const int dim0, const int dim
   }
 }
 
-#if V_MAX % 2 != 0
-#error This implementation requires even V
+// The asm does a column pair (col, col+1) as rows 0..col with both columns plus
+// one row with only the second, so odd V puts the leftover column first:
+// (-1, 0), (1, 2), ... Column -1 gets a scratch with a zeroed first column
+// rather than a pointer one row before the buffer.
+#if V_MAX % 2 == 0
+#define M4F_FIRST_COL 0
+#else
+#define M4F_FIRST_COL (-1)
+
+#define M4F_PAIR_ROWS_BYTES (O_MAX + 8*((O_MAX+7)/8))
+
+static inline void first_pair_rows(unsigned char *tmp, const unsigned char *O) {
+    memset(tmp, 0, M4F_PAIR_ROWS_BYTES);
+    memcpy(tmp + O_MAX, O, O_MAX);
+}
+
+static inline void first_pair_cols(unsigned char *tmp, const unsigned char *V) {
+    for (int j = 0; j < K_MAX; j++) {
+        tmp[j * V_MAX] = 0;
+        tmp[j * V_MAX + 1] = V[j * V_MAX];
+    }
+}
 #endif
 
 static __attribute__ ((noinline,unused))
@@ -118,13 +144,23 @@ void multiply_P1_right_m4f(uint32_t *P2, const uint64_t *P1, const unsigned char
 
     uint32_t table[o_size*256];
 
-    for (int col = 0; col < V_MAX; col += 2 ){
+#if V_MAX % 2 != 0
+    unsigned char tmp[M4F_PAIR_ROWS_BYTES];
+#endif
+
+    for (int col = M4F_FIRST_COL; col < V_MAX; col += 2 ){
 
         for (int i = 0; i < o_size; i++)
         {
             table[i] = 0;
         }
         // build table.
+#if V_MAX % 2 != 0
+        if (col < 0) {
+            first_pair_rows(tmp, O);
+            multiply_P1_right_m4f_O_asm2(table, tmp, col);
+        } else
+#endif
         multiply_P1_right_m4f_O_asm2(table, O + col*O_MAX, col);
 
         // do pairs of field elements (P1)
@@ -148,7 +184,11 @@ void multiply_P1_right_transposed_m4f(uint32_t *P1_O, const uint64_t *P1, const 
     const int m_vec_limbs = (M_MAX + 15)/ 16;
 
     uint32_t table[k_size*256];
-    for (int col = 0; col < V_MAX; col += 2 ){
+#if V_MAX % 2 != 0
+    unsigned char tmp[(K_MAX-1)*V_MAX + 2];
+#endif
+
+    for (int col = M4F_FIRST_COL; col < V_MAX; col += 2 ){
 
         for (int i = 0; i < k_size; i++)
         {
@@ -156,6 +196,12 @@ void multiply_P1_right_transposed_m4f(uint32_t *P1_O, const uint64_t *P1, const 
         }
 
         // build table.
+#if V_MAX % 2 != 0
+        if (col < 0) {
+            first_pair_cols(tmp, O);
+            multiply_P1_right_m4f_K_asm2_transposed(table, tmp, col);
+        } else
+#endif
         multiply_P1_right_m4f_K_asm2_transposed(table, O + col, col);
         // do pairs of field elements (P1)
         multiply_P1_right_m4f_V_V_K_asm(P1_O, table, P1 + m_vec_limbs * col, col+1);
@@ -173,6 +219,58 @@ void P1_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char
     repack_add((uint32_t *)acc, P1_Vt, V_MAX, K_MAX);
 }
 
+static __attribute__ ((noinline,unused))
+void multiply_P1t_right_transposed_m4f(uint32_t *P1_Vt, const uint64_t *P1, const unsigned char *V){
+    const int k_size = (K_MAX+7)/8;
+    // input and outputs are padded to 64-bit limbs
+    // intermediate representation is 32-bit limbs
+    const int m_vec_limbs_64 = (M_MAX + 15)/ 16;
+    const int m_vec_limbs_32 = (M_MAX + 7) / 8;
+
+    uint32_t table[k_size*256];
+
+    const uint64_t *P1t_ptr = P1;
+#if V_MAX % 2 != 0
+    unsigned char tmp[(K_MAX-1)*V_MAX + 2];
+#endif
+
+    for (int col = M4F_FIRST_COL; col < V_MAX; col += 2 ){
+
+        for (int i = 0; i < k_size; i++)
+        {
+            table[i] = 0;
+        }
+
+        // build table.
+#if V_MAX % 2 != 0
+        if (col < 0) {
+            first_pair_cols(tmp, V);
+            multiply_P1_right_m4f_K_asm2_transposed(table, tmp, col);
+        } else
+#endif
+        multiply_P1_right_m4f_K_asm2_transposed(table, V + col, col);
+
+        // do pairs of field elements (P1t)
+        if(col >= 0){
+            multiply_P1t_right_m4f_V_V_K_asm(&P1_Vt[((col)*m_vec_limbs_32*8) * k_size], table, P1t_ptr + m_vec_limbs_64 * (col), V_MAX-col-1);
+            P1t_ptr += m_vec_limbs_64*(V_MAX-col-1);
+        } else {
+            multiply_P1t_right_m4f_first_V_V_K_asm(P1_Vt, table, P1);
+        }
+        P1t_ptr += m_vec_limbs_64*(V_MAX-(col+1)-1);
+    }
+}
+
+static __attribute__ ((noinline,unused))
+void P1t_times_Vt(const mayo_params_t* p, const uint64_t* P1, const unsigned char* V, uint64_t* acc){
+    (void)p;
+    uint32_t P1_Vt[(K_MAX + 7)/8 * (8*((M_MAX+7)/8)) * V_MAX] = {0};
+
+    multiply_P1t_right_transposed_m4f((uint32_t *)P1_Vt, P1, V);
+
+    repack_add((uint32_t *)acc, P1_Vt, V_MAX, K_MAX);
+}
+
 
 static void multiply_P1P1t_right_m4f(uint32_t *P1_O, const uint64_t *P1, const unsigned char *O){
     const int o_size = (O_MAX+7)/8;
@@ -184,7 +282,11 @@ static void multiply_P1P1t_right_m4f(uint32_t *P1_O, const uint64_t *P1, const u
     uint32_t table[o_size*256];
 
     const uint64_t *P1t_ptr = P1;
-    for (int col = 0; col < V_MAX; col += 2 ){
+#if V_MAX % 2 != 0
+    unsigned char tmp[M4F_PAIR_ROWS_BYTES];
+#endif
+
+    for (int col = M4F_FIRST_COL; col < V_MAX; col += 2 ){
 
         for (int i = 0; i < o_size; i++)
         {
@@ -192,6 +294,12 @@ static void multiply_P1P1t_right_m4f(uint32_t *P1_O, const uint64_t *P1, const u
         }
 
         // build table.
+#if V_MAX % 2 != 0
+        if (col < 0) {
+            first_pair_rows(tmp, O);
+            multiply_P1_right_m4f_O_asm2(table, tmp, col);
+        } else
+#endif
         multiply_P1_right_m4f_O_asm2(table, O + col*O_MAX, col);
 
 
@@ -304,6 +412,47 @@ void compute_M_and_VPV(const mayo_params_t* p, const unsigned char* Vdec, const 
     mul_add_mat_x_m_mat(PARAM_m_vec_limbs(p), Vdec, Pv, VP1V, param_k, param_v, param_k);
 }
 
+// Like compute_M_and_VPV, but without a materialized L: reuses P1 * V^t to form
+// M = V * ((P1 + P1^t) * O + P2) on the fly, avoiding the O(v^2 * o) L step.
+static __attribute__ ((noinline,unused))
+void compute_M_and_VPV_implicit(const mayo_params_t* p, const unsigned char* Vdec, const uint64_t *P2, const uint64_t *P1, const unsigned char *O, const uint64_t *lambda, uint64_t *M, uint64_t *VP1V){
+
+    const int param_k = PARAM_k(p);
+    const int param_v = PARAM_v(p);
+    const int param_o = PARAM_o(p);
+    const int m_vec_limbs = PARAM_m_vec_limbs(p);
+
+    uint64_t Pv[V_MAX * K_MAX * M_VEC_LIMBS_MAX] = {0};
+
+    P1_times_Vt(p, P1, Vdec, Pv);
+
+    // lambda goes into column 0 of P1 * V^t, and both of its contributions then
+    // ride along on products that are computed anyway: V * (P1 * V^t) turns it into
+    // Lambda(v_i) in VP1V[i][0], and because column 0 survives the Pv ^= Pt fold,
+    // Wt_times_O turns it into (O^t lambda)[c] in block 0 of M. v XORs, no multiplies.
+    for (int r = 0; r < param_v; r++) {
+        m_vec_add(m_vec_limbs, lambda + (size_t) r * m_vec_limbs, Pv + (size_t) r * param_k * m_vec_limbs);
+    }
+
+    mul_add_mat_x_m_mat(m_vec_limbs, Vdec, Pv, VP1V, param_k, param_v, param_k); // VP1V = V * (P1 * V^t)
+
+    // Pv ^= P1^t * V^t  ->  (P1 + P1^t) * V^t  (the diagonal cancels in characteristic two)
+    P1t_times_Vt(p, P1, Vdec, Pv);
+
+    mul_add_mat_x_m_mat(m_vec_limbs, Vdec, P2, M, param_k, param_v, param_o);     // M = V * P2
+
+    // the asm computes O^t * Pv, which is M = V * (P1 + P1^t) * O transposed
+    uint64_t Mt[O_MAX * K_MAX * M_VEC_LIMBS_MAX];
+    mul_add_mat_trans_x_m_mat(m_vec_limbs, O, Pv, Mt, param_v, param_o, param_k);
+    for (int j = 0; j < param_k; j++) {
+        for (int l = 0; l < param_o; l++) {
+            for (int limb = 0; limb < m_vec_limbs; limb++) {
+                M[(j * param_o + l) * m_vec_limbs + limb] ^= Mt[(l * param_k + j) * m_vec_limbs + limb];
+            }
+        }
+    }
+}
+
 static inline
 void compute_P3(const mayo_params_t* p, const uint64_t* P1, uint64_t *P2, const unsigned char *O, uint64_t *P3){
 
@@ -323,13 +472,20 @@ void compute_P3(const mayo_params_t* p, const uint64_t* P1, uint64_t *P2, const 
 // compute S * PS  = [ S1 S2 ] * [ P1*S1 + P2*S2 = P1 ] = [ S1*P1 + S2*P2 ]
 //                               [         P3*S2 = P2 ]
 static __attribute__ ((noinline,unused)) void m_calculate_PS_SPS(const mayo_params_t *p, const uint64_t *P1, const uint64_t *P2, const uint64_t *P3, const unsigned char *s,
-                                      uint64_t *SPS) {
+                                      const uint64_t *lambda, uint64_t *SPS) {
     // compute P * S^t = {(P1, P2), (0, P3)} * S^t = {(P1*S1 + P2*S2), (P3 * S2)}
     #ifndef ENABLE_PARAMS_DYNAMIC
     (void) p;
     #endif
     uint64_t PS[N_MAX * K_MAX * M_VEC_LIMBS_MAX] = { 0 };
     m_calculate_PS(P1, P2, P3, s, PARAM_m(p), PARAM_v(p), PARAM_o(p), PARAM_k(p), PS);
+
+    // lambda into column 0 of PS; the S * PS pass below applies s[i][r] to it, so
+    // SPS[i][0] picks up Lambda(s_i) at the cost of n m-vector XORs and no multiplies.
+    for (int r = 0; r < PARAM_n(p); r++) {
+        m_vec_add(PARAM_m_vec_limbs(p), lambda + (size_t) r * PARAM_m_vec_limbs(p),
+                  PS + (size_t) r * PARAM_k(p) * PARAM_m_vec_limbs(p));
+    }
 
     // compute S * P * S = S* (P*S)
     m_calculate_SPS(PS, s, PARAM_m(p), PARAM_k(p), PARAM_n(p), SPS);

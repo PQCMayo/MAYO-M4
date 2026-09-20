@@ -586,50 +586,55 @@ ef_unbitslice_asm:
 
     gf16_bitslice tmp0, tmp2, tmp4, tmp6, tmp1, tmp3, tmp5, tmp7
 
-    .if ncols % 32 == 15
+    // the 4 bitsliced words expand to 8 output words: 2i is tmp<2i> masked,
+    // 2i+1 the same source shifted down a nibble. ef_r elements left, 4 per word.
+    .set ef_r, ncols % 32
+    .if ef_r == 0
+    .set ef_r, 32
+    .endif
+    .set ef_full, ef_r / 4
+    .set ef_rem, ef_r % 4
+    .set ef_words, (ef_r + 3) / 4
+
+    .if ef_words > 1
     lsr.w tmp1, tmp0, #4
+    .endif
+    .if ef_words > 3
     lsr.w tmp3, tmp2, #4
-
-    and.w tmp0, #0x0F0F0F0F
-    and.w tmp1, #0x0F0F0F0F
-    and.w tmp2, #0x0F0F0F0F
-    and.w tmp3, #0x0F0F0F0F
-
-    str.w tmp0, [out]
-    str.w tmp1, [out, #4*1]
-    str.w tmp2, [out, #4*2]
-    strh.w tmp3, [out, #4*3]
-    lsr.w tmp3, 16
-    strb.w tmp3, [out, #4*3+2]
+    .endif
+    .if ef_words > 5
+    lsr.w tmp5, tmp4, #4
+    .endif
+    .if ef_words > 7
+    lsr.w tmp7, tmp6, #4
     .endif
 
-    .if ncols % 32 == 17
-    lsr.w tmp1, tmp0, #4
-    lsr.w tmp3, tmp2, #4
+    .irp idx, 0,1,2,3,4,5,6,7
+        .if \idx < ef_words
+        and.w tmp\idx, #0x0F0F0F0F
+        .endif
+    .endr
 
-    and.w tmp0, #0x0F0F0F0F
-    and.w tmp1, #0x0F0F0F0F
-    and.w tmp2, #0x0F0F0F0F
-    and.w tmp3, #0x0F0F0F0F
-    and.w tmp4, #0x0F0F0F0F
+    .irp idx, 0,1,2,3,4,5,6,7
+        .if \idx < ef_full
+        str.w tmp\idx, [out, #4*\idx]
+        .endif
+    .endr
 
-    str.w tmp0, [out]
-    str.w tmp1, [out, #4*1]
-    str.w tmp2, [out, #4*2]
-    str.w tmp3, [out, #4*3]
-    strb.w tmp4, [out, #4*4]
-    .endif
-
-    .if ncols % 32 == 5
-    lsr.w tmp1, tmp0, #4
-
-
-    and.w tmp0, #0x0F0F0F0F
-    and.w tmp1, #0x0F0F0F0F
-
-    str.w tmp0, [out]
-    strb.w tmp1, [out, #4*1]
-    .endif
+    // trailing 1..3 elements
+    .irp idx, 0,1,2,3,4,5,6,7
+        .if ef_rem != 0 && ef_full == \idx
+            .if ef_rem == 1
+            strb.w tmp\idx, [out, #4*\idx]
+            .elseif ef_rem == 2
+            strh.w tmp\idx, [out, #4*\idx]
+            .else
+            strh.w tmp\idx, [out, #4*\idx]
+            lsr.w tmp\idx, 16
+            strb.w tmp\idx, [out, #4*\idx+2]
+            .endif
+        .endif
+    .endr
 
 
     pop.w {r4-r11, pc}
